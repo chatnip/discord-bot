@@ -66,8 +66,25 @@ def get_user(user_id):
 
 def register_user(user_id, user_name):
     """유저 등록"""
-    cursor.execute("INSERT INTO users (id, name, house, personality) VALUES (%s, %s, NULL, NULL)", (user_id, user_name))
-    conn.commit()
+    try:
+        db_config = get_db_config()  # DB 설정 불러오기
+        conn = mysql.connector.connect(**db_config)  # 새로운 DB 연결
+        cursor = conn.cursor()
+
+        cursor.execute(
+            "INSERT INTO users (id, name, house, personality, strength, constitution, size, intelligence, willpower, dexterity, appearance, education) VALUES (%s, %s, NULL, NULL, 50, 50, 50, 50, 50, 50, 50, 50)",
+            (user_id, user_name)
+        )
+        conn.commit()
+        print(f"✅ 유저 등록 완료: {user_id} - {user_name}")
+
+    except mysql.connector.Error as e:
+        print(f"❌ 유저 등록 실패: {e}")
+
+    finally:
+        cursor.close()
+        conn.close()
+
 
 def update_user_name(user_id, new_name):
     """유저 이름 변경"""
