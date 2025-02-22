@@ -80,7 +80,6 @@ class ProfileCommands(discord.app_commands.Group):
         view = PersonalitySelectionView(user_id)  # 동적으로 버튼 생성
         await interaction.response.send_message("😃 **성격을 선택하세요!**", view=view, ephemeral=True)
 
-# 기숙사 선택 버튼 UI
 class HouseSelectionView(discord.ui.View):
     def __init__(self, user_id):
         super().__init__(timeout=60)  # 60초 후 버튼 비활성화
@@ -103,17 +102,37 @@ class HouseSelectionView(discord.ui.View):
         await self.assign_house(interaction, "후플푸프")
 
     async def assign_house(self, interaction: discord.Interaction, house: str):
-        """기숙사를 선택하면 DB 업데이트 후 메시지를 보냄"""
-        user_id = str(interaction.user.id)
-        if user_id != str(self.user_id):
-            await interaction.response.send_message("❌ 본인만 선택할 수 있습니다!", ephemeral=True)
+        """기숙사 선택 시 DB 업데이트 후 역할 부여"""
+        guild = interaction.guild  # 서버 정보 가져오기
+        user = interaction.user  # 유저 정보 가져오기
+        role_id = HOUSE_ROLES.get(house)  # 선택한 기숙사 역할 ID 가져오기
+
+        if not role_id:
+            await interaction.response.send_message("❌ 해당 기숙사 역할을 찾을 수 없습니다.", ephemeral=True)
             return
 
-        success = update_user_house(user_id, house)
-        if success:
-            await interaction.response.edit_message(content=f"🏠 **{interaction.user.display_name} 님이 {house} 기숙사에 배정되었습니다!**", view=None)
-        else:
-            await interaction.response.send_message("❌ 기숙사 업데이트에 실패했습니다. 관리자에게 문의하세요.", ephemeral=True)
+        role = guild.get_role(role_id)  # 역할 객체 가져오기
+        if not role:
+            await interaction.response.send_message("❌ 해당 역할이 존재하지 않습니다. 서버 관리자에게 문의하세요.", ephemeral=True)
+            return
 
+        # 기존 기숙사 역할 제거
+        for r in user.roles:
+            if r.id in HOUSE_ROLES.values():  # 기존 기숙사 역할이 있으면 제거
+                await user.remove_roles(r)
+
+        # 새 역할 부여
+        await user.add_roles(role)
+
+        # DB 업데이트
+        success = update_user_house(str(user.id), house)
+        if success:
+            await interaction.response.edit_message(
+                content=f"🏠 **{user.display_name} 님이 {house} 기숙사에 배정되었습니다!** 역할이 자동으로 부여되었습니다.",
+                view=None
+            )
+        else:
+            await interaction.response.send_mess
+            
 # 명령어 그룹 객체 생성
 profile_group = ProfileCommands(name="프로필", description="프로필 관련 명령어 그룹")
