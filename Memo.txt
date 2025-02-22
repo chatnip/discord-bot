@@ -1,0 +1,4 @@
+cd discord-bot   # 프로젝트 폴더로 이동
+venv\Scripts\activate   # 가상 환경 활성화
+python bot.py   # 봇 실행
+deactivate   # 개발 종료 후 비활성화
