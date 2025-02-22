@@ -72,30 +72,41 @@ def update_user_name(user_id, new_name):
 
 def update_user_house(user_id, house):
     """유저가 기숙사를 선택하면 해당 기숙사의 능력치를 반영"""
-    house = house.capitalize()
     if house not in HOUSE_STATS.keys():
         return False  # 잘못된 기숙사 입력
 
     stats = HOUSE_STATS[house]
 
     cursor.execute("""
-        UPDATE users SET house = %s, STR = STR + %s, CON = CON + %s, 
-        SIZ = SIZ + %s, INT = INT + %s, POW = POW + %s, DEX = DEX + %s WHERE id = %s
+        UPDATE users SET house = %s,
+            strength = COALESCE(strength, 0) + %s,
+            constitution = COALESCE(constitution, 0) + %s,
+            size = COALESCE(size, 0) + %s,
+            intelligence = COALESCE(intelligence, 0) + %s,
+            willpower = COALESCE(willpower, 0) + %s,
+            dexterity = COALESCE(dexterity, 0) + %s
+        WHERE id = %s
     """, (house, stats["STR"], stats["CON"], stats["SIZ"], stats["INT"], stats["POW"], stats["DEX"], user_id))
     conn.commit()
     return cursor.rowcount > 0  # 업데이트 성공 여부 반환
 
+
 def update_user_personality(user_id, personality):
     """유저가 성격을 선택하면 해당 성격의 능력치를 반영"""
-    personality = personality.capitalize()
     if personality not in PERSONALITY_STATS.keys():
         return False  # 잘못된 성격 입력
 
     stats = PERSONALITY_STATS[personality]
 
     cursor.execute("""
-        UPDATE users SET personality = %s, STR = STR + %s, CON = CON + %s, 
-        SIZ = SIZ + %s, INT = INT + %s, POW = POW + %s, DEX = DEX + %s WHERE id = %s
+        UPDATE users SET personality = %s,
+            strength = COALESCE(strength, 0) + %s,
+            constitution = COALESCE(constitution, 0) + %s,
+            size = COALESCE(size, 0) + %s,
+            intelligence = COALESCE(intelligence, 0) + %s,
+            willpower = COALESCE(willpower, 0) + %s,
+            dexterity = COALESCE(dexterity, 0) + %s
+        WHERE id = %s
     """, (personality, stats["STR"], stats["CON"], stats["SIZ"], stats["INT"], stats["POW"], stats["DEX"], user_id))
     conn.commit()
     return cursor.rowcount > 0  # 업데이트 성공 여부 반환
@@ -103,11 +114,12 @@ def update_user_personality(user_id, personality):
 
 
 
+
 HOUSE_STATS = {
-    "그리핀도르": {"STR": 10, "CON": 0, "SIZ": 0, "INT": -5, "POW": 5, "DEX": 0},
-    "슬리데린": {"STR": 0, "CON": 0, "SIZ": 0, "INT": 10, "POW": -5, "DEX": 0},
-    "래번클로": {"STR": -5, "CON": 0, "SIZ": 0, "INT": 10, "POW": 0, "DEX": -5},
-    "후플푸프": {"STR": 0, "CON": 10, "SIZ": 0, "INT": 0, "POW": -5, "DEX": -5}
+    "그리핀도르": {"strength": 10, "constitution": 0, "size": 0, "intelligence": -5, "willpower": 5, "dexterity": 0},
+    "슬리데린": {"strength": 0, "constitution": 0, "size": 0, "intelligence": 10, "willpower": -5, "dexterity": 0},
+    "래번클로": {"strength": -5, "constitution": 0, "size": 0, "intelligence": 10, "willpower": 0, "dexterity": -5},
+    "후플푸프": {"strength": 0, "constitution": 10, "size": 0, "intelligence": 0, "willpower": -5, "dexterity": -5}
 }
 
 # 기숙사 역할 ID
@@ -119,38 +131,33 @@ HOUSE_ROLES = {
 }
 
 PERSONALITY_STATS = {
-    "대담한": {"STR": 15, "CON": 0, "SIZ": 0, "INT": -10, "POW": 10, "DEX": 0},
-    "신중한": {"STR": -10, "CON": 10, "SIZ": 0, "INT": 15, "POW": -10, "DEX": 0},
-    "정확한": {"STR": 0, "CON": 0, "SIZ": 0, "INT": 10, "POW": 10, "DEX": -15},
-    "용감한": {"STR": 10, "CON": 10, "SIZ": 0, "INT": 0, "POW": 0, "DEX": -10},
-    "냉정한": {"STR": 0, "CON": 0, "SIZ": 0, "INT": -10, "POW": 15, "DEX": -5},
-    "활발한": {"STR": 0, "CON": -10, "SIZ": 0, "INT": 0, "POW": 0, "DEX": 15},
-    "지적인": {"STR": -10, "CON": 0, "SIZ": 0, "INT": 15, "POW": 0, "DEX": -10},
-    "온화한": {"STR": 0, "CON": 10, "SIZ": 0, "INT": 0, "POW": 10, "DEX": -15},
-    "신뢰감": {"STR": 0, "CON": 0, "SIZ": 0, "INT": 10, "POW": -10, "DEX": 10},
-    "자립적": {"STR": 10, "CON": -10, "SIZ": 0, "INT": 0, "POW": 0, "DEX": 0},
-    "논리적": {"STR": -10, "CON": 0, "SIZ": 0, "INT": 15, "POW": 0, "DEX": -10},
-    "감성적": {"STR": 0, "CON": 0, "SIZ": 0, "INT": -10, "POW": 10, "DEX": 10},
-    "차분한": {"STR": 0, "CON": 10, "SIZ": 0, "INT": 0, "POW": 10, "DEX": -15},
-    "유연한": {"STR": 0, "CON": 0, "SIZ": 0, "INT": 10, "POW": 0, "DEX": 10},
-    "책임감": {"STR": 10, "CON": 10, "SIZ": 0, "INT": -10, "POW": 0, "DEX": -10},
-    "집중력": {"STR": 0, "CON": 0, "SIZ": 0, "INT": 15, "POW": -10, "DEX": -10},
-    "유머감": {"STR": 0, "CON": 0, "SIZ": 0, "INT": -10, "POW": 10, "DEX": 10},
-    "도전적": {"STR": 10, "CON": 0, "SIZ": 0, "INT": 0, "POW": 10, "DEX": -10},
-    "사교적": {"STR": 0, "CON": 0, "SIZ": 0, "INT": -10, "POW": 0, "DEX": 15},
-    "직관적": {"STR": 0, "CON": 0, "SIZ": 0, "INT": -10, "POW": 10, "DEX": 10},
-    "도덕적": {"STR": -10, "CON": 10, "SIZ": 0, "INT": 10, "POW": 0, "DEX": -10},
-    "공감형": {"STR": 0, "CON": 0, "SIZ": 0, "INT": -10, "POW": 10, "DEX": 10},
-    "완벽한": {"STR": 0, "CON": 0, "SIZ": 0, "INT": 10, "POW": -10, "DEX": 10},
-    "적극적": {"STR": 10, "CON": 0, "SIZ": 0, "INT": -10, "POW": 0, "DEX": 10},
-    "성실한": {"STR": 10, "CON": 10, "SIZ": 0, "INT": 0, "POW": 0, "DEX": -15},
-    "즉흥적": {"STR": 0, "CON": -10, "SIZ": 0, "INT": -10, "POW": 0, "DEX": 15},
-    "긍정적": {"STR": 0, "CON": 0, "SIZ": 0, "INT": -10, "POW": 10, "DEX": 10},
-    "창의적": {"STR": -10, "CON": 0, "SIZ": 0, "INT": 15, "POW": 0, "DEX": -10},
-    "조용한": {"STR": 0, "CON": 10, "SIZ": 0, "INT": 0, "POW": 10, "DEX": -15}
+    "대담한": {"strength": 15, "constitution": 0, "size": 0, "intelligence": -10, "willpower": 10, "dexterity": 0},
+    "신중한": {"strength": -10, "constitution": 10, "size": 0, "intelligence": 15, "willpower": -10, "dexterity": 0},
+    "정확한": {"strength": 0, "constitution": 0, "size": 0, "intelligence": 10, "willpower": 10, "dexterity": -15},
+    "용감한": {"strength": 10, "constitution": 10, "size": 0, "intelligence": 0, "willpower": 0, "dexterity": -10},
+    "냉정한": {"strength": 0, "constitution": 0, "size": 0, "intelligence": -10, "willpower": 15, "dexterity": -5},
+    "활발한": {"strength": 0, "constitution": -10, "size": 0, "intelligence": 0, "willpower": 0, "dexterity": 15},
+    "지적인": {"strength": -10, "constitution": 0, "size": 0, "intelligence": 15, "willpower": 0, "dexterity": -10},
+    "온화한": {"strength": 0, "constitution": 10, "size": 0, "intelligence": 0, "willpower": 10, "dexterity": -15},
+    "신뢰감": {"strength": 0, "constitution": 0, "size": 0, "intelligence": 10, "willpower": -10, "dexterity": 10},
+    "자립적": {"strength": 10, "constitution": -10, "size": 0, "intelligence": 0, "willpower": 0, "dexterity": 0},
+    "논리적": {"strength": -10, "constitution": 0, "size": 0, "intelligence": 15, "willpower": 0, "dexterity": -10},
+    "감성적": {"strength": 0, "constitution": 0, "size": 0, "intelligence": -10, "willpower": 10, "dexterity": 10},
+    "차분한": {"strength": 0, "constitution": 10, "size": 0, "intelligence": 0, "willpower": 10, "dexterity": -15},
+    "유연한": {"strength": 0, "constitution": 0, "size": 0, "intelligence": 10, "willpower": 0, "dexterity": 10},
+    "책임감": {"strength": 10, "constitution": 10, "size": 0, "intelligence": -10, "willpower": 0, "dexterity": -10},
+    "집중력": {"strength": 0, "constitution": 0, "size": 0, "intelligence": 15, "willpower": -10, "dexterity": -10},
+    "유머감": {"strength": 0, "constitution": 0, "size": 0, "intelligence": -10, "willpower": 10, "dexterity": 10},
+    "도전적": {"strength": 10, "constitution": 0, "size": 0, "intelligence": 0, "willpower": 10, "dexterity": -10},
+    "사교적": {"strength": 0, "constitution": 0, "size": 0, "intelligence": -10, "willpower": 0, "dexterity": 15},
+    "직관적": {"strength": 0, "constitution": 0, "size": 0, "intelligence": -10, "willpower": 10, "dexterity": 10},
+    "도덕적": {"strength": -10, "constitution": 10, "size": 0, "intelligence": 10, "willpower": 0, "dexterity": -10},
+    "공감형": {"strength": 0, "constitution": 0, "size": 0, "intelligence": -10, "willpower": 10, "dexterity": 10},
+    "완벽한": {"strength": 0, "constitution": 0, "size": 0, "intelligence": 10, "willpower": -10, "dexterity": 10},
+    "적극적": {"strength": 10, "constitution": 0, "size": 0, "intelligence": -10, "willpower": 0, "dexterity": 10},
+    "성실한": {"strength": 10, "constitution": 10, "size": 0, "intelligence": 0, "willpower": 0, "dexterity": -15},
+    "즉흥적": {"strength": 0, "constitution": -10, "size": 0, "intelligence": -10, "willpower": 0, "dexterity": 15},
+    "긍정적": {"strength": 0, "constitution": 0, "size": 0, "intelligence": -10, "willpower": 10, "dexterity": 10},
+    "창의적": {"strength": -10, "constitution": 0, "size": 0, "intelligence": 15, "willpower": 0, "dexterity": -10},
+    "조용한": {"strength": 0, "constitution": 10, "size": 0, "intelligence": 0, "willpower": 10, "dexterity": -15}
 }
-
-
-
-
-

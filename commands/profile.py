@@ -135,10 +135,20 @@ class HouseSelectionView(discord.ui.View):
         # DB 업데이트
         success = update_user_house(str(user.id), house)
         if success:
-            await interaction.response.edit_message(
-                content=f"🏠 **{user.display_name} 님이 {house} 기숙사에 배정되었습니다!** 역할이 자동으로 부여되었습니다.",
-                view=None
-            )
+            try:
+                # 버튼을 비활성화하여 중복 선택 방지
+                for child in self.children:
+                    child.disabled = True
+
+                await interaction.response.edit_message(
+                    content=f"🏠 **{user.display_name} 님이 {house} 기숙사에 배정되었습니다!** 역할이 자동으로 부여되었습니다.",
+                    view=self  # 버튼 비활성화 적용된 View 업데이트
+                )
+            except discord.NotFound:
+                await interaction.followup.send(
+                    f"🏠 **{user.display_name} 님이 {house} 기숙사에 배정되었습니다!** 역할이 자동으로 부여되었습니다.",
+                    ephemeral=True
+                )
         else:
             await interaction.response.send_message("❌ 기숙사 업데이트에 실패했습니다. 관리자에게 문의하세요.", ephemeral=True)
 
