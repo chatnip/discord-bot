@@ -1,6 +1,5 @@
 import discord
 from discord.ext import commands
-from discord import app_commands
 from dotenv import load_dotenv
 import os
 
@@ -23,5 +22,11 @@ bot.tree.add_command(profile_group)
 async def on_ready():
     await bot.tree.sync()
     print(f"✅ {bot.user} 로그인 완료!")
+
+@bot.tree.command(name="sync", description="슬래시 명령어를 동기화합니다.")
+async def sync_commands(interaction: discord.Interaction):
+    await bot.tree.sync()
+    await interaction.response.send_message("✅ 슬래시 명령어가 동기화되었습니다!", ephemeral=True)
+
 
 bot.run(TOKEN)
