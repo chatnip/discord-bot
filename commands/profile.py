@@ -25,22 +25,23 @@ class ProfileCommands(discord.app_commands.Group):
         user_data = get_user(user_id)
 
         if user_data:
-            user_name, house, personality, STR, CON, SIZ, INT, POW, DEX, APP, EDU = user_data[1:]
+            user_name, house, personality, strength, constitution, size, intelligence, willpower, dexterity, appearance, education = user_data[1:]
 
             embed = discord.Embed(title="📜 내 프로필", color=0x3498db)
             embed.add_field(name="이름", value=user_name, inline=False)
             embed.add_field(name="🏠 기숙사", value=house if house else "미정", inline=False)
             embed.add_field(name="😃 성격", value=personality if personality else "미정", inline=False)
-            embed.add_field(name="💪 힘 (STR)", value=str(STR), inline=True)
-            embed.add_field(name="❤️ 건강 (CON)", value=str(CON), inline=True)
-            embed.add_field(name="📏 크기 (SIZ)", value=str(SIZ), inline=True)
-            embed.add_field(name="🧠 지능 (INT)", value=str(INT), inline=True)
-            embed.add_field(name="🛡️ 이성 (POW)", value=str(POW), inline=True)
-            embed.add_field(name="⚡ 민첩 (DEX)", value=str(DEX), inline=True)
+            embed.add_field(name="💪 힘 (STR)", value=str(strength), inline=True)
+            embed.add_field(name="❤️ 건강 (CON)", value=str(constitution), inline=True)
+            embed.add_field(name="📏 크기 (SIZ)", value=str(size), inline=True)
+            embed.add_field(name="🧠 지능 (INT)", value=str(intelligence), inline=True)
+            embed.add_field(name="🛡️ 이성 (POW)", value=str(willpower), inline=True)
+            embed.add_field(name="⚡ 민첩 (DEX)", value=str(dexterity), inline=True)
 
             await interaction.response.send_message(embed=embed, ephemeral=True)
         else:
             await interaction.response.send_message("❌ 등록된 정보가 없습니다! `/프로필 등록`을 먼저 해주세요.", ephemeral=True)
+
 
     @app_commands.command(name="변경", description="내 프로필 정보를 변경합니다.")
     async def change_profile(self, interaction: discord.Interaction, new_name: str):

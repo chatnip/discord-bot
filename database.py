@@ -28,11 +28,6 @@ try:
     conn = mysql.connector.connect(**db_config)
     cursor = conn.cursor()
 
-    # 1️⃣ 기존 테이블 삭제 (초기화)
-    cursor.execute("DROP TABLE IF EXISTS users;")
-    print("🗑️ 기존 users 테이블 삭제 완료!")
-
-    # 2️⃣ 새로운 테이블 생성
     cursor.execute('''
         CREATE TABLE users (
             id VARCHAR(255) PRIMARY KEY,
