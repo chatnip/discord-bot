@@ -1,6 +1,7 @@
-import discord
 import os
+import urllib.parse
 import mysql.connector
+import discord
 from discord import app_commands
 from discord.ext import commands
 from dotenv import load_dotenv
@@ -10,34 +11,39 @@ load_dotenv()
 TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-# DATABASE_URL을 분석하여 MySQL 연결 정보 설정
+# DATABASE_URL을 안전하게 분석하는 함수
 def get_db_config():
-    db_url = DATABASE_URL.replace("mysql://", "").split(":")
-    user = db_url[0]
-    password = db_url[1].split("@")[0]
-    host = db_url[1].split("@")[1].split("/")[0]
-    dbname = db_url[1].split("@")[1].split("/")[1]
-    
+    if not DATABASE_URL:
+        raise ValueError("❌ ERROR: DATABASE_URL 환경 변수가 설정되지 않았습니다.")
+
+    url = urllib.parse.urlparse(DATABASE_URL)
+
     return {
-        "host": host,
-        "user": user,
-        "password": password,
-        "database": dbname
+        "host": url.hostname,
+        "user": url.username,
+        "password": url.password,
+        "database": url.path.lstrip("/"),  # "/railway"에서 "/" 제거
+        "port": url.port or 3306  # 포트가 없으면 기본값(3306) 사용
     }
 
 # MySQL 연결
-db_config = get_db_config()
-conn = mysql.connector.connect(**db_config)
-cursor = conn.cursor()
+try:
+    db_config = get_db_config()
+    conn = mysql.connector.connect(**db_config)
+    cursor = conn.cursor()
 
-# 유저 테이블 생성
-cursor.execute('''
-    CREATE TABLE IF NOT EXISTS users (
-        id VARCHAR(255) PRIMARY KEY,
-        name VARCHAR(255)
-    )
-''')
-conn.commit()
+    # 유저 테이블 생성
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            id VARCHAR(255) PRIMARY KEY,
+            name VARCHAR(255)
+        )
+    ''')
+    conn.commit()
+    print("✅ MySQL 데이터베이스 연결 성공!")
+except Exception as e:
+    print(f"❌ MySQL 연결 실패: {e}")
+    exit(1)  # 프로그램 종료
 
 # 봇 설정
 intents = discord.Intents.default()
