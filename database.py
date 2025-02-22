@@ -28,7 +28,7 @@ try:
     conn = mysql.connector.connect(**db_config)
     cursor = conn.cursor()
 
-    # 유저 테이블 수정: 기숙사, 성격, 능력치 추가
+    # 유저 테이블 생성 (기숙사 및 성격 포함)
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS users (
             id VARCHAR(255) PRIMARY KEY,
@@ -55,11 +55,14 @@ except Exception as e:
 def get_user(user_id):
     """유저 정보 조회"""
     cursor.execute("SELECT * FROM users WHERE id = %s", (user_id,))
-    return cursor.fetchone()
+    result = cursor.fetchone()
+    if not result:
+        return None  # 유저가 없는 경우 None 반환
+    return result
 
 def register_user(user_id, user_name):
     """유저 등록"""
-    cursor.execute("INSERT INTO users (id, name) VALUES (%s, %s)", (user_id, user_name))
+    cursor.execute("INSERT INTO users (id, name, house, personality) VALUES (%s, %s, NULL, NULL)", (user_id, user_name))
     conn.commit()
 
 def update_user_name(user_id, new_name):
@@ -69,6 +72,7 @@ def update_user_name(user_id, new_name):
 
 def update_user_house(user_id, house):
     """유저가 기숙사를 선택하면 해당 기숙사의 능력치를 반영"""
+    house = house.capitalize()
     if house not in HOUSE_STATS.keys():
         return False  # 잘못된 기숙사 입력
 
@@ -83,6 +87,7 @@ def update_user_house(user_id, house):
 
 def update_user_personality(user_id, personality):
     """유저가 성격을 선택하면 해당 성격의 능력치를 반영"""
+    personality = personality.capitalize()
     if personality not in PERSONALITY_STATS.keys():
         return False  # 잘못된 성격 입력
 
