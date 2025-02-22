@@ -1,6 +1,6 @@
 import discord
 from discord import app_commands
-from database import get_user, update_user_name, update_user_house, update_user_personality, register_user, HOUSE_STATS, PERSONALITY_STATS  # DB 함수 가져오기
+from database import get_user, update_user_name, update_user_house, update_user_personality, register_user, HOUSE_STATS, HOUSE_ROLES, PERSONALITY_STATS  # DB 함수 가져오기
 
 class ProfileCommands(discord.app_commands.Group):
     """프로필 관련 명령어 그룹"""
@@ -97,7 +97,7 @@ class HouseSelectionView(discord.ui.View):
     async def ravenclaw_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         await self.assign_house(interaction, "래번클로")
 
-    @discord.ui.button(label="후플푸프 🦡", style=discord.ButtonStyle.grey)
+    @discord.ui.button(label="후플푸프 🦡", style=discord.ButtonStyle.danger)
     async def hufflepuff_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         await self.assign_house(interaction, "후플푸프")
 
@@ -133,6 +133,6 @@ class HouseSelectionView(discord.ui.View):
             )
         else:
             await interaction.response.send_mess
-            
+
 # 명령어 그룹 객체 생성
 profile_group = ProfileCommands(name="프로필", description="프로필 관련 명령어 그룹")
