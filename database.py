@@ -28,9 +28,13 @@ try:
     conn = mysql.connector.connect(**db_config)
     cursor = conn.cursor()
 
-    # 유저 테이블 생성 (기숙사 및 성격 포함)
+    # 1️⃣ 기존 테이블 삭제 (초기화)
+    cursor.execute("DROP TABLE IF EXISTS users;")
+    print("🗑️ 기존 users 테이블 삭제 완료!")
+
+    # 2️⃣ 새로운 테이블 생성
     cursor.execute('''
-        CREATE TABLE IF NOT EXISTS users (
+        CREATE TABLE users (
             id VARCHAR(255) PRIMARY KEY,
             name VARCHAR(255),
             house VARCHAR(50) DEFAULT NULL,
@@ -46,10 +50,15 @@ try:
         )
     ''')
     conn.commit()
-    print("✅ MySQL 데이터베이스 연결 성공!")
+    print("✅ 새로운 users 테이블 생성 완료!")
+
 except Exception as e:
-    print(f"❌ MySQL 연결 실패: {e}")
-    exit(1)  # 프로그램 종료
+    print(f"❌ MySQL 오류 발생: {e}")
+
+finally:
+    cursor.close()
+    conn.close()
+    print("🔌 MySQL 연결 종료")
 
 # 데이터베이스 함수
 def get_user(user_id):
