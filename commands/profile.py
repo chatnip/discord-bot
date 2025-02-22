@@ -97,12 +97,12 @@ class HouseSelectionView(discord.ui.View):
     async def ravenclaw_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         await self.assign_house(interaction, "래번클로")
 
-    @discord.ui.button(label="후플푸프 🦡", style=discord.ButtonStyle.danger)
+    @discord.ui.button(label="후플푸프 🦡", style=discord.ButtonStyle.gray)
     async def hufflepuff_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         await self.assign_house(interaction, "후플푸프")
 
     async def assign_house(self, interaction: discord.Interaction, house: str):
-        """기숙사 선택 시 DB 업데이트 후 역할 부여"""
+        """기숙사를 선택하면 DB 업데이트 후 역할 부여"""
         guild = interaction.guild  # 서버 정보 가져오기
         user = interaction.user  # 유저 정보 가져오기
         role_id = HOUSE_ROLES.get(house)  # 선택한 기숙사 역할 ID 가져오기
@@ -117,12 +117,20 @@ class HouseSelectionView(discord.ui.View):
             return
 
         # 기존 기숙사 역할 제거
-        for r in user.roles:
-            if r.id in HOUSE_ROLES.values():  # 기존 기숙사 역할이 있으면 제거
-                await user.remove_roles(r)
+        try:
+            for r in user.roles:
+                if r.id in HOUSE_ROLES.values():  # 기존 기숙사 역할이 있으면 제거
+                    await user.remove_roles(r)
+        except discord.Forbidden:
+            await interaction.response.send_message("❌ 봇에게 역할을 제거할 권한이 없습니다. 관리자에게 문의하세요.", ephemeral=True)
+            return
 
         # 새 역할 부여
-        await user.add_roles(role)
+        try:
+            await user.add_roles(role)
+        except discord.Forbidden:
+            await interaction.response.send_message("❌ 봇에게 역할을 추가할 권한이 없습니다. 관리자에게 문의하세요.", ephemeral=True)
+            return
 
         # DB 업데이트
         success = update_user_house(str(user.id), house)
@@ -132,7 +140,8 @@ class HouseSelectionView(discord.ui.View):
                 view=None
             )
         else:
-            await interaction.response.send_mess
+            await interaction.response.send_message("❌ 기숙사 업데이트에 실패했습니다. 관리자에게 문의하세요.", ephemeral=True)
+
 
 # 명령어 그룹 객체 생성
 profile_group = ProfileCommands(name="프로필", description="프로필 관련 명령어 그룹")
