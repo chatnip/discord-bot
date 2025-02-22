@@ -35,14 +35,14 @@ try:
             name VARCHAR(255),
             house VARCHAR(50) DEFAULT NULL,
             personality VARCHAR(100) DEFAULT NULL,
-            STR INT DEFAULT 50,
-            CON INT DEFAULT 50,
-            SIZ INT DEFAULT 50,
-            INT INT DEFAULT 50,
-            POW INT DEFAULT 50,
-            DEX INT DEFAULT 50,
-            APP INT DEFAULT 50,
-            EDU INT DEFAULT 50
+            strength INT DEFAULT 50,
+            constitution INT DEFAULT 50,
+            size INT DEFAULT 50,
+            intelligence INT DEFAULT 50,
+            willpower INT DEFAULT 50,
+            dexterity INT DEFAULT 50,
+            appearance INT DEFAULT 50,
+            education INT DEFAULT 50
         )
     ''')
     conn.commit()
