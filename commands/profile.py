@@ -55,8 +55,8 @@ class ProfileCommands(discord.app_commands.Group):
             await interaction.response.send_message("❌ 등록된 정보가 없습니다! `/프로필 등록`을 먼저 해주세요.", ephemeral=True)
 
     @app_commands.command(name="기숙사선택", description="기숙사를 선택합니다.")
-    async def select_house(self, interaction: discord.Interaction, house: str):
-        """유저가 기숙사를 선택하는 명령어"""
+    async def select_house(self, interaction: discord.Interaction):
+        """기숙사 선택 버튼을 보여주는 명령어"""
         user_id = str(interaction.user.id)
         user_data = get_user(user_id)
 
@@ -64,36 +64,56 @@ class ProfileCommands(discord.app_commands.Group):
             await interaction.response.send_message("❌ 등록된 정보가 없습니다! `/프로필 등록`을 먼저 해주세요.", ephemeral=True)
             return
 
-        if house.lower() not in [h.lower() for h in HOUSE_STATS.keys()]:
-            await interaction.response.send_message("❌ 올바른 기숙사를 선택해주세요! (그리핀도르, 슬리데린, 래번클로, 후플푸프)", ephemeral=True)
+        view = HouseSelectionView(user_id)
+        await interaction.response.send_message("🏠 **기숙사를 선택하세요!**", view=view, ephemeral=True)
+
+    @app_commands.command(name="성격선택", description="성격을 선택합니다.")
+    async def select_personality(self, interaction: discord.Interaction):
+        """성격 선택 버튼을 보여주는 명령어"""
+        user_id = str(interaction.user.id)
+        user_data = get_user(user_id)
+
+        if not user_data:
+            await interaction.response.send_message("❌ 등록된 정보가 없습니다! `/프로필 등록`을 먼저 해주세요.", ephemeral=True)
+            return
+
+        view = PersonalitySelectionView(user_id)  # 동적으로 버튼 생성
+        await interaction.response.send_message("😃 **성격을 선택하세요!**", view=view, ephemeral=True)
+
+# 기숙사 선택 버튼 UI
+class HouseSelectionView(discord.ui.View):
+    def __init__(self, user_id):
+        super().__init__(timeout=60)  # 60초 후 버튼 비활성화
+        self.user_id = user_id
+
+    @discord.ui.button(label="그리핀도르 🦁", style=discord.ButtonStyle.red)
+    async def gryffindor_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await self.assign_house(interaction, "그리핀도르")
+
+    @discord.ui.button(label="슬리데린 🐍", style=discord.ButtonStyle.green)
+    async def slytherin_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await self.assign_house(interaction, "슬리데린")
+
+    @discord.ui.button(label="래번클로 🦅", style=discord.ButtonStyle.blurple)
+    async def ravenclaw_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await self.assign_house(interaction, "래번클로")
+
+    @discord.ui.button(label="후플푸프 🦡", style=discord.ButtonStyle.grey)
+    async def hufflepuff_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await self.assign_house(interaction, "후플푸프")
+
+    async def assign_house(self, interaction: discord.Interaction, house: str):
+        """기숙사를 선택하면 DB 업데이트 후 메시지를 보냄"""
+        user_id = str(interaction.user.id)
+        if user_id != str(self.user_id):
+            await interaction.response.send_message("❌ 본인만 선택할 수 있습니다!", ephemeral=True)
             return
 
         success = update_user_house(user_id, house)
         if success:
-            await interaction.response.send_message(f"🏠 {interaction.user.display_name} 님이 **{house}** 기숙사에 배정되었습니다!", ephemeral=True)
+            await interaction.response.edit_message(content=f"🏠 **{interaction.user.display_name} 님이 {house} 기숙사에 배정되었습니다!**", view=None)
         else:
             await interaction.response.send_message("❌ 기숙사 업데이트에 실패했습니다. 관리자에게 문의하세요.", ephemeral=True)
-
-    @app_commands.command(name="성격선택", description="성격을 선택합니다.")
-    async def select_personality(self, interaction: discord.Interaction, personality: str):
-        """유저가 성격을 선택하는 명령어"""
-        user_id = str(interaction.user.id)
-        user_data = get_user(user_id)
-
-        if not user_data:
-            await interaction.response.send_message("❌ 등록된 정보가 없습니다! `/프로필 등록`을 먼저 해주세요.", ephemeral=True)
-            return
-
-        personality = personality.lower()
-        if personality not in PERSONALITY_STATS:
-            await interaction.response.send_message("❌ 올바른 성격을 선택해주세요!", ephemeral=True)
-            return
-
-        success = update_user_personality(user_id, personality)
-        if success:
-            await interaction.response.send_message(f"✅ 성격이 `{personality}`(으)로 설정되었습니다!", ephemeral=True)
-        else:
-            await interaction.response.send_message("❌ 성격 업데이트에 실패했습니다. 관리자에게 문의하세요.", ephemeral=True)
 
 # 명령어 그룹 객체 생성
 profile_group = ProfileCommands(name="프로필", description="프로필 관련 명령어 그룹")
