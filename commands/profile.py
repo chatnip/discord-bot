@@ -70,7 +70,6 @@ class ProfileCommands(discord.app_commands.Group):
         user_id = str(interaction.user.id)
         user_data = get_user(user_id)
 
-        # DB에서 가져온 데이터가 없으면 안내 후 종료
         if not user_data:
             await interaction.response.send_message(
                 "❌ 등록된 정보가 없습니다! `/프로필 등록`을 먼저 해주세요.",
@@ -78,7 +77,6 @@ class ProfileCommands(discord.app_commands.Group):
             )
             return
 
-        # user_data[0]이 id이므로 [1:]부터가 우리가 쓸 필드들
         (
             user_name,
             house,
@@ -113,32 +111,18 @@ class ProfileCommands(discord.app_commands.Group):
             color=0x3498db
         )
 
-        # ───────────── [기본 정보] 2컬럼 예시 ─────────────
-        # 왼쪽: 이름, 기숙사 | 오른쪽: 성격, (원하면 다른 항목도)
-        # 예시는 총 4줄 정도만 쓴 뒤 코드 블록으로 감쌉니다.
-        basic_left = [
-            ("이름", user_name),
-            ("기숙사", house if house else "미정")
-        ]
-        basic_right = [
-            ("성격", personality if personality else "미정"),
-            ("교육", f"{education}")  # 혹은 다른 항목
-        ]
-        # 두 리스트의 길이가 같아야 zip으로 묶어서 한 줄씩 출력 가능
-        # 길이가 안 맞으면 맞춰주세요(비거나, 더 적으면).
-        # 각 항목을 폭 8~10 정도로 맞춰 주면 깔끔.
+        # ────────── [1] 기본 정보 (세로 표시) ──────────
+        # 코드 블록 없이, 단순 줄바꿈만으로 구성
+        basic_info = (
+            f"**이름**: {user_name}\n"
+            f"**기숙사**: {house or '미정'}\n"
+            f"**성격**: {personality or '미정'}\n"
+            f"**교육(EDU)**: {education}"
+        )
+        embed.add_field(name=":bust_in_silhouette: 기본 정보", value=basic_info, inline=False)
 
-        basic_info_lines = []
-        for (label1, val1), (label2, val2) in zip(basic_left, basic_right):
-            line = f"{label1:<6}: {val1:<10}   {label2:<6}: {val2}"
-            basic_info_lines.append(line)
-
-        # 코드 블록으로 묶어서 고정폭 폰트 적용
-        basic_info_block = "```" + "\n".join(basic_info_lines) + "```"
-        embed.add_field(name=":bust_in_silhouette: 기본 정보", value=basic_info_block, inline=False)
-
-        # ───────────── [능력치] 2컬럼 예시 ─────────────
-        # 왼쪽에 STR,DEX,APP,POW / 오른쪽에 CON,SIZ,INT,EDU 등
+        # ────────── [2] 특성치 (코드 블록 2칼럼) ──────────
+        # 왼쪽: STR, DEX, APP, POW | 오른쪽: CON, SIZ, INT, EDU (원하는 대로 분배)
         stats_left = [
             ("STR(근력)", strength),
             ("DEX(민첩)", dexterity),
@@ -154,17 +138,14 @@ class ProfileCommands(discord.app_commands.Group):
 
         stats_lines = []
         for (label1, val1), (label2, val2) in zip(stats_left, stats_right):
-            # 왼쪽 폭 14 / 오른쪽 폭 14 정도로 맞춤 (원하는 대로 조정)
-            line = f"{label1:<10}: {str(val1):<3}   {label2:<10}: {str(val2)}"
+            # 공백 폭을 조금 줄인 예: 왼쪽 10칸, 오른쪽 10칸
+            line = f"{label1:<9}: {val1:<2}  {label2:<9}: {val2}"
             stats_lines.append(line)
 
         stats_block = "```" + "\n".join(stats_lines) + "```"
-        embed.add_field(name=":muscle: 능력치", value=stats_block, inline=False)
+        embed.add_field(name=":muscle: 특성치", value=stats_block, inline=False)
 
-        # ───────────── [전투/정신 정보] 2컬럼 ─────────────
-        # HP, MP, SAN, LUK, MOV, DB, BUILD 등등
-        # 필요에 따라 7개라 짝이 안 맞으면 빈 칸으로 맞춰도 되고,
-        # 3개 vs 4개 이런 식으로 분배할 수도 있습니다.
+        # ────────── [3] 보조 특성치 (코드 블록, 공백 축소) ──────────
         combat_left = [
             ("HP(체력)", hp),
             ("MP(마력)", mp),
@@ -172,28 +153,28 @@ class ProfileCommands(discord.app_commands.Group):
         ]
         combat_right = [
             ("LUK(행운)", luck),
-            ("MOV(이동력)", movement),
-            ("DB(피해보너스)", damage_bonus),
+            ("MOV(이동)", movement),
+            ("DB(보너스)", damage_bonus),
             ("BUILD(체구)", build),
         ]
         combat_lines = []
-        # zip()은 짧은쪽에 맞춰 돌아감 → 길이 다르면 주의
         for (label1, val1), (label2, val2) in zip(combat_left, combat_right):
-            line = f"{label1:<12}: {val1:<3}   {label2:<14}: {val2}"
+            # 폭을 좀 더 줄였음
+            line = f"{label1:<10}: {val1:<2} {label2:<10}: {val2}"
             combat_lines.append(line)
 
-        # 만약 combat_right가 더 길다면 남은 아이템을 추가로 처리해야 함
-        # 여기서는 예시로 생략. 필요하면 while문 등에 넣어서 남은 부분도 출력 가능.
+        # 남는 항목이 있으면 추가 처리 (zip은 짧은쪽 끝나면 멈춤)
+        # 여기서는 예시로 생략
 
         combat_block = "```" + "\n".join(combat_lines) + "```"
-        embed.add_field(name=":shield: 생존/정신 정보", value=combat_block, inline=False)
+        embed.add_field(name=":shield: 보조 특성치", value=combat_block, inline=False)
 
-        # ───────────── [재화] ─────────────
+        # ────────── [4] 보유 재화 ──────────
         money_str = f"{galleons} 갈레온 {sickles} 시클 {knuts} 크넛"
         embed.add_field(name=":moneybag: 보유 재화", value=f"```\n{money_str}\n```", inline=False)
 
-        # 임베드 전송(개인 메시지처럼 보이려면 ephemeral=True)
         await interaction.response.send_message(embed=embed, ephemeral=True)
+
 
 
 
