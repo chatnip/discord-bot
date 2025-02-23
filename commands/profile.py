@@ -1,6 +1,6 @@
 import discord
 from discord import app_commands
-from database import get_user, update_user_name, update_user_house, update_user_personality, register_user, HOUSE_STATS, HOUSE_ROLES, PERSONALITY_STATS  # DB 함수 가져오기
+from database import get_user, update_user_name, update_user_size, update_user_house, update_user_appearance, update_user_personality, register_user, HOUSE_STATS, HOUSE_ROLES, PERSONALITY_STATS  # DB 함수 가져오기
 
 class ProfileCommands(discord.app_commands.Group):
     """프로필 관련 명령어 그룹"""
@@ -25,18 +25,39 @@ class ProfileCommands(discord.app_commands.Group):
         user_data = get_user(user_id)
 
         if user_data:
-            user_name, house, personality, strength, constitution, size, intelligence, willpower, dexterity, appearance, education = user_data[1:]
+            (user_name, house, personality, strength, constitution, size,
+            intelligence, willpower, dexterity, appearance, education, money) = user_data[1:]
+
+            galleons = money // 493  # 1 갈레온 = 493 크넛
+            remainder = money % 493
+            sickles = remainder // 29  # 1 시클 = 29 크넛
+            knuts = remainder % 29  # 나머지 크넛
 
             embed = discord.Embed(title="📜 내 프로필", color=0x3498db)
+
             embed.add_field(name="이름", value=user_name, inline=False)
             embed.add_field(name="🏠 기숙사", value=house if house else "미정", inline=False)
-            embed.add_field(name="😃 성격", value=personality if personality else "미정", inline=False)
-            embed.add_field(name="💪 힘 (STR)", value=str(strength), inline=True)
+            embed.add_field(name="🙂 성격", value=personality if personality else "미정", inline=False)
+
+            embed.add_field(name="💪 근력 (STR)", value=str(strength), inline=True)
             embed.add_field(name="❤️ 건강 (CON)", value=str(constitution), inline=True)
             embed.add_field(name="📏 크기 (SIZ)", value=str(size), inline=True)
-            embed.add_field(name="🧠 지능 (INT)", value=str(intelligence), inline=True)
-            embed.add_field(name="🛡️ 이성 (POW)", value=str(willpower), inline=True)
             embed.add_field(name="⚡ 민첩 (DEX)", value=str(dexterity), inline=True)
+            embed.add_field(name="🎭 외모 (APP)", value=str(appearance), inline=True)
+            embed.add_field(name="🧠 지능 (INT)", value=str(intelligence), inline=True)
+            embed.add_field(name="🛡️ 정신 (POW)", value=str(willpower), inline=True)
+            embed.add_field(name="📖 교육 (EDU)", value=str(education), inline=True)
+            embed.add_field(name="🍀 행운 (LUK)")
+
+            embed.add_field(name="🏃 이동력")
+            embed.add_field(name="🛡️ 피해보너스")
+            embed.add_field(name="📏 체구")
+
+            embed.add_field(name="🛡️ 체력 (HP) (크기+건강)%10 소수점 이하 버리기")
+            embed.add_field(name="🛡️ 마력 (MP) (최대치가 정신 % 5) 소수점 이하 버리기")
+            embed.add_field(name="🛡️ 이성 (SAN) (최대치 99, 기본값이 정신)")
+
+            embed.add_field(name="💰 재화", value=f"{galleons} 갈레온 {sickles} 시클 {knuts} 크넛", inline=False)
 
             await interaction.response.send_message(embed=embed, ephemeral=True)
         else:
@@ -54,6 +75,7 @@ class ProfileCommands(discord.app_commands.Group):
             await interaction.response.send_message(f"✅ 이름이 `{new_name}`(으)로 변경되었습니다!", ephemeral=True)
         else:
             await interaction.response.send_message("❌ 등록된 정보가 없습니다! `/프로필 등록`을 먼저 해주세요.", ephemeral=True)
+
 
     @app_commands.command(name="크기변경", description="캐릭터 크기(SIZ) 스탯을 변경합니다.")
     async def change_size(self, interaction: discord.Interaction, new_size: int):
@@ -194,7 +216,6 @@ class HouseSelectionView(discord.ui.View):
                 )
         else:
             await interaction.response.send_message("❌ 기숙사 업데이트에 실패했습니다. 관리자에게 문의하세요.", ephemeral=True)
-
 
 # 명령어 그룹 객체 생성
 profile_group = ProfileCommands(name="프로필", description="프로필 관련 명령어 그룹")

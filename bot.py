@@ -5,6 +5,7 @@ import os
 
 # 명령어 그룹 불러오기
 from commands.profile import profile_group
+from commands.gm_commands import gm_group
 
 # 환경 변수 로드
 load_dotenv()
@@ -16,6 +17,7 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 
 # 명령어 그룹 등록
 bot.tree.add_command(profile_group)
+bot.tree.add_command(gm_group)
 
 # 봇 실행
 @bot.event

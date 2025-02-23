@@ -25,37 +25,22 @@ def get_db_config():
 # ---------------------------------------
 # 1. 초기 테이블 생성 파트
 # ---------------------------------------
-# try:
-#     db_config = get_db_config()
-#     conn = mysql.connector.connect(**db_config)
-#     cursor = conn.cursor()
+try:
+    db_config = get_db_config()
+    conn = mysql.connector.connect(**db_config)
+    cursor = conn.cursor()
 
-#     cursor.execute('''
-#         CREATE TABLE users (
-#             id VARCHAR(255) PRIMARY KEY,
-#             name VARCHAR(255),
-#             house VARCHAR(50) DEFAULT NULL,
-#             personality VARCHAR(100) DEFAULT NULL,
-#             strength INT DEFAULT 50,
-#             constitution INT DEFAULT 50,
-#             size INT DEFAULT 50,
-#             intelligence INT DEFAULT 50,
-#             willpower INT DEFAULT 50,
-#             dexterity INT DEFAULT 50,
-#             appearance INT DEFAULT 50,
-#             education INT DEFAULT 50
-#         )
-#     ''')
-#     conn.commit()
-#     print("✅ 새로운 users 테이블 생성 완료!")
+    cursor.execute("ALTER TABLE users ADD COLUMN money INT DEFAULT 0;")
+    conn.commit()
+    print("✅ money(재화) 컬럼 추가 완료!")
 
-# except Exception as e:
-#     print(f"❌ MySQL 오류 발생: {e}")
+except Exception as e:
+    print(f"❌ MySQL 오류 발생: {e}")
 
-# finally:
-#     cursor.close()
-#     conn.close()
-#     print("🔌 MySQL 연결 종료")
+finally:
+    cursor.close()
+    conn.close()
+    print("🔌 MySQL 연결 종료")
 
 
 # ---------------------------------------
@@ -244,6 +229,47 @@ def update_user_personality(user_id, personality):
         conn.close()
 
 
+
+
+
+def add_money(user_id, amount):
+    """유저에게 재화 추가 (크넛 단위)"""
+    try:
+        db_config = get_db_config()
+        conn = mysql.connector.connect(**db_config)
+        cursor = conn.cursor()
+
+        cursor.execute("UPDATE users SET money = money + %s WHERE id = %s", (amount, user_id))
+        conn.commit()
+        return cursor.rowcount > 0  # 업데이트 성공 여부 반환
+    except mysql.connector.Error as e:
+        print(f"❌ 재화 추가 실패: {e}")
+        return False
+    finally:
+        cursor.close()
+        conn.close()
+
+
+def remove_money(user_id, amount):
+    """유저 재화 감소 (최소 0 유지)"""
+    try:
+        db_config = get_db_config()
+        conn = mysql.connector.connect(**db_config)
+        cursor = conn.cursor()
+
+        cursor.execute("UPDATE users SET money = GREATEST(money - %s, 0) WHERE id = %s", (amount, user_id))
+        conn.commit()
+        return cursor.rowcount > 0  # 업데이트 성공 여부 반환
+    except mysql.connector.Error as e:
+        print(f"❌ 재화 감소 실패: {e}")
+        return False
+    finally:
+        cursor.close()
+        conn.close()
+
+
+
+
 # ---------------------------------------
 # 3. 스탯 딕셔너리들
 # ---------------------------------------
@@ -320,3 +346,5 @@ PERSONALITY_STATS = {
     "창의적":     {"strength": -10, "constitution": 0,  "size": 0,  "intelligence": 15,  "willpower": 0,   "dexterity": -10},
     "조용한":     {"strength": 0,   "constitution": 10, "size": 0,  "intelligence": 0,   "willpower": 10,  "dexterity": -15}
 }
+
+GM_ROLE_ID = 1343038882316423259
