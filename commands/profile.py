@@ -25,8 +25,9 @@ class ProfileCommands(discord.app_commands.Group):
         user_data = get_user(user_id)
 
         if user_data:
-            (user_name, house, personality, strength, constitution, size,
-            intelligence, willpower, dexterity, appearance, education, money) = user_data[1:]
+            (user_name, house, personality, strength, constitution, size, intelligence,
+            willpower, dexterity, appearance, education, money, luck, movement, damage_bonus,
+            build, hp, mp, sanity) = user_data[1:]
 
             galleons = money // 493  # 1 갈레온 = 493 크넛
             remainder = money % 493
