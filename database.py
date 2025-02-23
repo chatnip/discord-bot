@@ -1,6 +1,7 @@
 import os
 import urllib.parse
 import mysql.connector
+import random
 from dotenv import load_dotenv
 
 # 환경 변수 로드
@@ -30,9 +31,28 @@ try:
     conn = mysql.connector.connect(**db_config)
     cursor = conn.cursor()
 
-    cursor.execute("ALTER TABLE users ADD COLUMN money INT DEFAULT 0;")
-    conn.commit()
-    print("✅ money(재화) 컬럼 추가 완료!")
+    # 추가할 컬럼 리스트
+    new_columns = {
+        "luck": "INT DEFAULT 0",
+        "movement": "INT DEFAULT 0",
+        "damage_bonus": "VARCHAR(10) DEFAULT '0'",
+        "build": "INT DEFAULT 0",
+        "hp": "INT DEFAULT 0",
+        "mp": "INT DEFAULT 0",
+        "sanity": "INT DEFAULT 0"
+    }
+
+    # 컬럼 추가 실행
+    for column, column_type in new_columns.items():
+        try:
+            cursor.execute(f"ALTER TABLE users ADD COLUMN {column} {column_type};")
+            conn.commit()
+            print(f"✅ {column} 컬럼 추가 완료!")
+        except mysql.connector.Error as e:
+            if f"Duplicate column name '{column}'" in str(e):
+                print(f"ℹ️ {column} 컬럼이 이미 존재합니다. 업데이트 생략.")
+            else:
+                print(f"❌ {column} 컬럼 추가 실패: {e}")
 
 except Exception as e:
     print(f"❌ MySQL 오류 발생: {e}")
@@ -71,10 +91,19 @@ def register_user(user_id, user_name):
         conn = mysql.connector.connect(**db_config)  # 새로운 DB 연결
         cursor = conn.cursor()
 
+        # 행운 주사위 굴리기
+        luck_value = roll_luck()
+
+        # 기본값 계산
+        base_strength = base_constitution = base_size = base_dexterity = base_willpower = 50
+        base_hp = (base_size + base_constitution) // 10
+        base_mp = base_willpower // 5
+        base_sanity = min(base_willpower, 99)  # 최대 99
+
         cursor.execute(
-            "INSERT INTO users (id, name, house, personality, strength, constitution, size, intelligence, willpower, dexterity, appearance, education) "
-            "VALUES (%s, %s, NULL, NULL, 50, 50, 50, 50, 50, 50, 50, 50)",
-            (user_id, user_name)
+            "INSERT INTO users (id, name, house, personality, strength, constitution, size, dexterity, willpower, appearance, education, luck, hp, mp, sanity) "
+            "VALUES (%s, %s, NULL, NULL, %s, %s, %s, %s, %s, 50, 50, %s, %s, %s, %s)",
+            (user_id, user_name, base_strength, base_constitution, base_size, base_dexterity, base_willpower, luck_value, base_hp, base_mp, base_sanity)
         )
         conn.commit()
         print(f"✅ 유저 등록 완료: {user_id} - {user_name}")
@@ -268,6 +297,11 @@ def remove_money(user_id, amount):
         conn.close()
 
 
+
+
+def roll_luck():
+    """3d6 * 5 행운값 굴리기"""
+    return sum(random.randint(1, 6) for _ in range(3)) * 5
 
 
 # ---------------------------------------

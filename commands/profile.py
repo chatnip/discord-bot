@@ -47,15 +47,14 @@ class ProfileCommands(discord.app_commands.Group):
             embed.add_field(name="🧠 지능 (INT)", value=str(intelligence), inline=True)
             embed.add_field(name="🛡️ 정신 (POW)", value=str(willpower), inline=True)
             embed.add_field(name="📖 교육 (EDU)", value=str(education), inline=True)
-            embed.add_field(name="🍀 행운 (LUK)")
 
-            embed.add_field(name="🏃 이동력")
-            embed.add_field(name="🛡️ 피해보너스")
-            embed.add_field(name="📏 체구")
-
-            embed.add_field(name="🛡️ 체력 (HP) (크기+건강)%10 소수점 이하 버리기")
-            embed.add_field(name="🛡️ 마력 (MP) (최대치가 정신 % 5) 소수점 이하 버리기")
-            embed.add_field(name="🛡️ 이성 (SAN) (최대치 99, 기본값이 정신)")
+            embed.add_field(name="🍀 행운 (LUK)", value=str(luck), inline=True)
+            embed.add_field(name="🏃 이동력 (MOV)", value=str(movement), inline=True)
+            embed.add_field(name="🛡️ 피해보너스 (DB)", value=str(damage_bonus), inline=True)
+            embed.add_field(name="📏 체구 (BUILD)", value=str(build), inline=True)
+            embed.add_field(name="🛡️ 체력 (HP)", value=str(hp), inline=True)
+            embed.add_field(name="🔮 마력 (MP)", value=str(mp), inline=True)
+            embed.add_field(name="🛡️ 이성 (SAN)", value=str(sanity), inline=True)
 
             embed.add_field(name="💰 재화", value=f"{galleons} 갈레온 {sickles} 시클 {knuts} 크넛", inline=False)
 
