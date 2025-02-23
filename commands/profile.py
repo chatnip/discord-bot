@@ -18,6 +18,52 @@ class ProfileCommands(discord.app_commands.Group):
             register_user(user_id, user_name)
             await interaction.response.send_message(f"🎉 등록 완료! 환영합니다, **{user_name}**!", ephemeral=True)
 
+    # @app_commands.command(name="조회", description="내 프로필 정보를 확인합니다.")
+    # async def view_profile(self, interaction: discord.Interaction):
+    #     """유저 프로필을 확인하는 명령어"""
+    #     user_id = str(interaction.user.id)
+    #     user_data = get_user(user_id)
+
+    #     if user_data:
+    #         (user_name, house, personality, strength, constitution, size, intelligence,
+    #         willpower, dexterity, appearance, education, money, luck, movement, damage_bonus,
+    #         build, hp, mp, sanity) = user_data[1:]
+
+    #         galleons = money // 493  # 1 갈레온 = 493 크넛
+    #         remainder = money % 493
+    #         sickles = remainder // 29  # 1 시클 = 29 크넛
+    #         knuts = remainder % 29  # 나머지 크넛
+
+    #         embed = discord.Embed(title="📜 내 프로필", color=0x3498db)
+
+    #         embed.add_field(name="이름", value=user_name, inline=False)
+    #         embed.add_field(name="🏠 기숙사", value=house if house else "미정", inline=False)
+    #         embed.add_field(name="🙂 성격", value=personality if personality else "미정", inline=False)
+
+    #         embed.add_field(name="💪 근력 (STR)", value=str(strength), inline=True)
+    #         embed.add_field(name="❤️ 건강 (CON)", value=str(constitution), inline=True)
+    #         embed.add_field(name="📏 크기 (SIZ)", value=str(size), inline=True)
+    #         embed.add_field(name="⚡ 민첩 (DEX)", value=str(dexterity), inline=True)
+    #         embed.add_field(name="🎭 외모 (APP)", value=str(appearance), inline=True)
+    #         embed.add_field(name="🧠 지능 (INT)", value=str(intelligence), inline=True)
+    #         embed.add_field(name="🛡️ 정신 (POW)", value=str(willpower), inline=True)
+    #         embed.add_field(name="📖 교육 (EDU)", value=str(education), inline=True)
+
+    #         embed.add_field(name="🍀 행운 (LUK)", value=str(luck), inline=True)
+    #         embed.add_field(name="🏃 이동력 (MOV)", value=str(movement), inline=True)
+    #         embed.add_field(name="🛡️ 피해보너스 (DB)", value=str(damage_bonus), inline=True)
+    #         embed.add_field(name="📏 체구 (BUILD)", value=str(build), inline=True)
+    #         embed.add_field(name="🛡️ 체력 (HP)", value=str(hp), inline=True)
+    #         embed.add_field(name="🔮 마력 (MP)", value=str(mp), inline=True)
+    #         embed.add_field(name="🛡️ 이성 (SAN)", value=str(sanity), inline=True)
+
+    #         embed.add_field(name="💰 재화", value=f"{galleons} 갈레온 {sickles} 시클 {knuts} 크넛", inline=False)
+
+    #         await interaction.response.send_message(embed=embed, ephemeral=True)
+    #     else:
+    #         await interaction.response.send_message("❌ 등록된 정보가 없습니다! `/프로필 등록`을 먼저 해주세요.", ephemeral=True)
+
+
     @app_commands.command(name="조회", description="내 프로필 정보를 확인합니다.")
     async def view_profile(self, interaction: discord.Interaction):
         """유저 프로필을 확인하는 명령어"""
@@ -29,39 +75,58 @@ class ProfileCommands(discord.app_commands.Group):
             willpower, dexterity, appearance, education, money, luck, movement, damage_bonus,
             build, hp, mp, sanity) = user_data[1:]
 
-            galleons = money // 493  # 1 갈레온 = 493 크넛
+            # 환전 계산
+            galleons = money // 493
             remainder = money % 493
-            sickles = remainder // 29  # 1 시클 = 29 크넛
-            knuts = remainder % 29  # 나머지 크넛
+            sickles = remainder // 29
+            knuts = remainder % 29
 
-            embed = discord.Embed(title="📜 내 프로필", color=0x3498db)
+            embed = discord.Embed(
+                title=":scroll: 내 프로필",
+                description="아래는 당신의 탐사자(캐릭터) 정보입니다.",
+                color=0x3498db
+            )
+            
+            # ───────────── 기본 정보 필드 ─────────────
+            basic_info = f"""
+                **이름**: {user_name}
+                **기숙사**: {house or "미정"}
+                **성격**: {personality or "미정"}
+                """
+            embed.add_field(name=":bust_in_silhouette: 기본 정보", value=basic_info, inline=False)
 
-            embed.add_field(name="이름", value=user_name, inline=False)
-            embed.add_field(name="🏠 기숙사", value=house if house else "미정", inline=False)
-            embed.add_field(name="🙂 성격", value=personality if personality else "미정", inline=False)
+            # ───────────── 능력치 필드 ─────────────
+            # 여러 줄 문자열로 깔끔하게 정리
+            stats_info = f"""
+                **STR(근력)**: {strength} | **CON(건강)**: {constitution} | **DEX(민첩)**: {dexterity}
+                **SIZ(크기)**: {size}   | **APP(외모)**: {appearance}   | **INT(지능)**: {intelligence}
+                **POW(정신)**: {willpower} | **EDU(교육)**: {education}
+                """
+            embed.add_field(name=":muscle: 능력치", value=stats_info, inline=False)
 
-            embed.add_field(name="💪 근력 (STR)", value=str(strength), inline=True)
-            embed.add_field(name="❤️ 건강 (CON)", value=str(constitution), inline=True)
-            embed.add_field(name="📏 크기 (SIZ)", value=str(size), inline=True)
-            embed.add_field(name="⚡ 민첩 (DEX)", value=str(dexterity), inline=True)
-            embed.add_field(name="🎭 외모 (APP)", value=str(appearance), inline=True)
-            embed.add_field(name="🧠 지능 (INT)", value=str(intelligence), inline=True)
-            embed.add_field(name="🛡️ 정신 (POW)", value=str(willpower), inline=True)
-            embed.add_field(name="📖 교육 (EDU)", value=str(education), inline=True)
+            # ───────────── 기타 전투/정신 필드 ─────────────
+            # HP, MP, SAN, LUK, MOV 등
+            combat_info = f"""
+                **HP(체력)**: {hp}  
+                **MP(마력)**: {mp}  
+                **SAN(이성)**: {sanity}  
+                **LUK(행운)**: {luck}  
+                **MOV(이동력)**: {movement}  
+                **피해보너스(DB)**: {damage_bonus}  
+                **체구(BUILD)**: {build}
+                """
+            embed.add_field(name=":shield: 생존/정신 정보", value=combat_info, inline=True)
 
-            embed.add_field(name="🍀 행운 (LUK)", value=str(luck), inline=True)
-            embed.add_field(name="🏃 이동력 (MOV)", value=str(movement), inline=True)
-            embed.add_field(name="🛡️ 피해보너스 (DB)", value=str(damage_bonus), inline=True)
-            embed.add_field(name="📏 체구 (BUILD)", value=str(build), inline=True)
-            embed.add_field(name="🛡️ 체력 (HP)", value=str(hp), inline=True)
-            embed.add_field(name="🔮 마력 (MP)", value=str(mp), inline=True)
-            embed.add_field(name="🛡️ 이성 (SAN)", value=str(sanity), inline=True)
-
-            embed.add_field(name="💰 재화", value=f"{galleons} 갈레온 {sickles} 시클 {knuts} 크넛", inline=False)
+            # ───────────── 재화 필드 ─────────────
+            money_info = f"**{galleons} 갈레온 {sickles} 시클 {knuts} 크넛**"
+            embed.add_field(name=":moneybag: 보유 재화", value=money_info, inline=True)
 
             await interaction.response.send_message(embed=embed, ephemeral=True)
         else:
-            await interaction.response.send_message("❌ 등록된 정보가 없습니다! `/프로필 등록`을 먼저 해주세요.", ephemeral=True)
+            await interaction.response.send_message(
+                "❌ 등록된 정보가 없습니다! `/프로필 등록`을 먼저 해주세요.",
+                ephemeral=True
+            )
 
 
     @app_commands.command(name="이름변경", description="캐릭터 닉네임을 변경합니다.")
