@@ -152,12 +152,12 @@ class ProfileCommands(discord.app_commands.Group):
         combat_right = [
             ("LUK(행운)", luck),
             ("MOV(이동)", movement),
-            ("DB(보너스)", damage_bonus),
+            ("DB(피해)", damage_bonus),
             ("BUILD(체구)", build),
         ]
         combat_lines = []
         for (label1, val1), (label2, val2) in zip(combat_left, combat_right):
-            line = f"{label1:<8}: {val1:<2} {label2:<8}: {val2}"
+            line = f"{label1:<9}: {val1:<2} {label2:<9}: {val2}"
             combat_lines.append(line)
 
         combat_block = "```" + "\n".join(combat_lines) + "```"
