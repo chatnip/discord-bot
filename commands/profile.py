@@ -65,7 +65,7 @@ class ProfileCommands(discord.app_commands.Group):
 
 
     @app_commands.command(name="조회", description="내 프로필 정보를 확인합니다.")
-    async def view_profile(self, interaction: discord.Interaction):
+    async def view_profile(interaction: discord.Interaction):
         """유저 프로필을 확인하는 명령어"""
         user_id = str(interaction.user.id)
         user_data = get_user(user_id)
