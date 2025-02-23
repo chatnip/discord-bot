@@ -111,18 +111,17 @@ class ProfileCommands(discord.app_commands.Group):
             color=0x3498db
         )
 
-        # ────────── [1] 기본 정보 (세로 표시) ──────────
-        # 코드 블록 없이, 단순 줄바꿈만으로 구성
-        basic_info = (
-            f"**이름**: {user_name}\n"
-            f"**기숙사**: {house or '미정'}\n"
-            f"**성격**: {personality or '미정'}\n"
-            f"**교육(EDU)**: {education}"
-        )
-        embed.add_field(name=":bust_in_silhouette: 기본 정보", value=basic_info, inline=False)
+        # ────────── [1] 기본 정보 (코드 블록) ──────────
+        basic_info_lines = []
+        basic_info_lines.append(f"이름   : {user_name}")
+        basic_info_lines.append(f"기숙사 : {house or '미정'}")
+        basic_info_lines.append(f"성격   : {personality or '미정'}")
+
+        basic_info_block = "```" + "\n".join(basic_info_lines) + "```"
+
+        embed.add_field(name=":bust_in_silhouette: 기본 정보", value=basic_info_block, inline=False)
 
         # ────────── [2] 특성치 (코드 블록 2칼럼) ──────────
-        # 왼쪽: STR, DEX, APP, POW | 오른쪽: CON, SIZ, INT, EDU (원하는 대로 분배)
         stats_left = [
             ("STR(근력)", strength),
             ("DEX(민첩)", dexterity),
@@ -138,7 +137,6 @@ class ProfileCommands(discord.app_commands.Group):
 
         stats_lines = []
         for (label1, val1), (label2, val2) in zip(stats_left, stats_right):
-            # 공백 폭을 조금 줄인 예: 왼쪽 10칸, 오른쪽 10칸
             line = f"{label1:<9}: {val1:<2}  {label2:<9}: {val2}"
             stats_lines.append(line)
 
@@ -159,12 +157,8 @@ class ProfileCommands(discord.app_commands.Group):
         ]
         combat_lines = []
         for (label1, val1), (label2, val2) in zip(combat_left, combat_right):
-            # 폭을 좀 더 줄였음
-            line = f"{label1:<10}: {val1:<2} {label2:<10}: {val2}"
+            line = f"{label1:<8}: {val1:<2} {label2:<8}: {val2}"
             combat_lines.append(line)
-
-        # 남는 항목이 있으면 추가 처리 (zip은 짧은쪽 끝나면 멈춤)
-        # 여기서는 예시로 생략
 
         combat_block = "```" + "\n".join(combat_lines) + "```"
         embed.add_field(name=":shield: 보조 특성치", value=combat_block, inline=False)
