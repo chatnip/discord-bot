@@ -43,9 +43,9 @@ class ProfileCommands(discord.app_commands.Group):
             await interaction.response.send_message("❌ 등록된 정보가 없습니다! `/프로필 등록`을 먼저 해주세요.", ephemeral=True)
 
 
-    @app_commands.command(name="변경", description="내 프로필 정보를 변경합니다.")
+    @app_commands.command(name="이름변경", description="캐릭터 닉네임을 변경합니다.")
     async def change_profile(self, interaction: discord.Interaction, new_name: str):
-        """유저 프로필 정보를 변경하는 명령어"""
+        """유저 닉네임 정보를 변경하는 명령어"""
         user_id = str(interaction.user.id)
         user_data = get_user(user_id)
 
@@ -54,6 +54,48 @@ class ProfileCommands(discord.app_commands.Group):
             await interaction.response.send_message(f"✅ 이름이 `{new_name}`(으)로 변경되었습니다!", ephemeral=True)
         else:
             await interaction.response.send_message("❌ 등록된 정보가 없습니다! `/프로필 등록`을 먼저 해주세요.", ephemeral=True)
+
+    @app_commands.command(name="크기변경", description="캐릭터 크기(SIZ) 스탯을 변경합니다.")
+    async def change_size(self, interaction: discord.Interaction, new_size: int):
+        """유저가 직접 크기(SIZ)를 변경하는 명령어"""
+        user_id = str(interaction.user.id)
+        user_data = get_user(user_id)
+
+        if not user_data:
+            await interaction.response.send_message("❌ 등록된 정보가 없습니다! `/프로필 등록`을 먼저 해주세요.", ephemeral=True)
+            return
+
+        if not (1 <= new_size <= 100):
+            await interaction.response.send_message("❌ 크기(SIZ)는 1에서 100 사이의 값만 가능합니다.", ephemeral=True)
+            return
+
+        success = update_user_size(user_id, new_size)
+        if success:
+            await interaction.response.send_message(f"📏 크기(SIZ)가 `{new_size}`(으)로 변경되었습니다!", ephemeral=True)
+        else:
+            await interaction.response.send_message("❌ 크기(SIZ) 변경에 실패했습니다.", ephemeral=True)
+
+
+    @app_commands.command(name="외모변경", description="캐릭터 외모(APP) 스탯을 변경합니다.")
+    async def change_appearance(self, interaction: discord.Interaction, new_appearance: int):
+        """유저가 직접 외모(APP)를 변경하는 명령어"""
+        user_id = str(interaction.user.id)
+        user_data = get_user(user_id)
+
+        if not user_data:
+            await interaction.response.send_message("❌ 등록된 정보가 없습니다! `/프로필 등록`을 먼저 해주세요.", ephemeral=True)
+            return
+
+        if not (1 <= new_appearance <= 100):
+            await interaction.response.send_message("❌ 외모(APP)는 1에서 100 사이의 값만 가능합니다.", ephemeral=True)
+            return
+
+        success = update_user_appearance(user_id, new_appearance)
+        if success:
+            await interaction.response.send_message(f"🎭 외모(APP)가 `{new_appearance}`(으)로 변경되었습니다!", ephemeral=True)
+        else:
+            await interaction.response.send_message("❌ 외모(APP) 변경에 실패했습니다.", ephemeral=True)
+
 
     @app_commands.command(name="기숙사선택", description="기숙사를 선택합니다.")
     async def select_house(self, interaction: discord.Interaction):

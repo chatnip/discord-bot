@@ -25,37 +25,37 @@ def get_db_config():
 # ---------------------------------------
 # 1. 초기 테이블 생성 파트
 # ---------------------------------------
-try:
-    db_config = get_db_config()
-    conn = mysql.connector.connect(**db_config)
-    cursor = conn.cursor()
+# try:
+#     db_config = get_db_config()
+#     conn = mysql.connector.connect(**db_config)
+#     cursor = conn.cursor()
 
-    cursor.execute('''
-        CREATE TABLE users (
-            id VARCHAR(255) PRIMARY KEY,
-            name VARCHAR(255),
-            house VARCHAR(50) DEFAULT NULL,
-            personality VARCHAR(100) DEFAULT NULL,
-            strength INT DEFAULT 50,
-            constitution INT DEFAULT 50,
-            size INT DEFAULT 50,
-            intelligence INT DEFAULT 50,
-            willpower INT DEFAULT 50,
-            dexterity INT DEFAULT 50,
-            appearance INT DEFAULT 50,
-            education INT DEFAULT 50
-        )
-    ''')
-    conn.commit()
-    print("✅ 새로운 users 테이블 생성 완료!")
+#     cursor.execute('''
+#         CREATE TABLE users (
+#             id VARCHAR(255) PRIMARY KEY,
+#             name VARCHAR(255),
+#             house VARCHAR(50) DEFAULT NULL,
+#             personality VARCHAR(100) DEFAULT NULL,
+#             strength INT DEFAULT 50,
+#             constitution INT DEFAULT 50,
+#             size INT DEFAULT 50,
+#             intelligence INT DEFAULT 50,
+#             willpower INT DEFAULT 50,
+#             dexterity INT DEFAULT 50,
+#             appearance INT DEFAULT 50,
+#             education INT DEFAULT 50
+#         )
+#     ''')
+#     conn.commit()
+#     print("✅ 새로운 users 테이블 생성 완료!")
 
-except Exception as e:
-    print(f"❌ MySQL 오류 발생: {e}")
+# except Exception as e:
+#     print(f"❌ MySQL 오류 발생: {e}")
 
-finally:
-    cursor.close()
-    conn.close()
-    print("🔌 MySQL 연결 종료")
+# finally:
+#     cursor.close()
+#     conn.close()
+#     print("🔌 MySQL 연결 종료")
 
 
 # ---------------------------------------
@@ -116,6 +116,42 @@ def update_user_name(user_id, new_name):
     finally:
         cursor.close()
         conn.close()
+
+def update_user_size(user_id, new_size):
+    """유저가 크기(size) 값을 변경"""
+    try:
+        db_config = get_db_config()
+        conn = mysql.connector.connect(**db_config)
+        cursor = conn.cursor()
+
+        cursor.execute("UPDATE users SET size = %s WHERE id = %s", (new_size, user_id))
+        conn.commit()
+        return cursor.rowcount > 0  # 업데이트 성공 여부 반환
+    except mysql.connector.Error as e:
+        print(f"❌ 크기(size) 변경 실패: {e}")
+        return False
+    finally:
+        cursor.close()
+        conn.close()
+
+
+def update_user_appearance(user_id, new_appearance):
+    """유저가 외모(appearance) 값을 변경"""
+    try:
+        db_config = get_db_config()
+        conn = mysql.connector.connect(**db_config)
+        cursor = conn.cursor()
+
+        cursor.execute("UPDATE users SET appearance = %s WHERE id = %s", (new_appearance, user_id))
+        conn.commit()
+        return cursor.rowcount > 0  # 업데이트 성공 여부 반환
+    except mysql.connector.Error as e:
+        print(f"❌ 외모(appearance) 변경 실패: {e}")
+        return False
+    finally:
+        cursor.close()
+        conn.close()
+
 
 
 def update_user_house(user_id, house):
