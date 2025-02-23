@@ -66,7 +66,7 @@ class ProfileCommands(discord.app_commands.Group):
 
     @app_commands.command(name="조회", description="내 프로필 정보를 확인합니다.")
     async def view_profile(self, interaction: discord.Interaction):
-        """유저 프로필을 확인하는 명령어"""
+        """유저 프로필(탐사자 정보)을 확인하는 명령어"""
         user_id = str(interaction.user.id)
         user_data = get_user(user_id)
 
@@ -78,26 +78,26 @@ class ProfileCommands(discord.app_commands.Group):
             )
             return
 
-        # user_data[0]이 id이므로 [1:]로 슬라이싱
+        # user_data[0]이 id이므로 [1:]부터가 우리가 쓸 필드들
         (
-            user_name, 
-            house, 
-            personality, 
-            strength, 
-            constitution, 
-            size, 
+            user_name,
+            house,
+            personality,
+            strength,
+            constitution,
+            size,
             intelligence,
-            willpower, 
-            dexterity, 
-            appearance, 
-            education, 
-            money, 
-            luck, 
-            movement, 
+            willpower,
+            dexterity,
+            appearance,
+            education,
+            money,
+            luck,
+            movement,
             damage_bonus,
-            build, 
-            hp, 
-            mp, 
+            build,
+            hp,
+            mp,
             sanity
         ) = user_data[1:]
 
@@ -107,46 +107,92 @@ class ProfileCommands(discord.app_commands.Group):
         sickles = remainder // 29
         knuts = remainder % 29
 
-        # Embed 생성
         embed = discord.Embed(
             title=":scroll: 내 프로필",
             description="아래는 당신의 탐사자(캐릭터) 정보입니다.",
             color=0x3498db
         )
 
-        # ────── [1] 기본 정보 필드 ──────
-        basic_info = (
-            f"**이름**: {user_name}\n"
-            f"**기숙사**: {house or '미정'}\n"
-            f"**성격**: {personality or '미정'}"
-        )
-        embed.add_field(name=":bust_in_silhouette: 기본 정보", value=basic_info, inline=False)
+        # ───────────── [기본 정보] 2컬럼 예시 ─────────────
+        # 왼쪽: 이름, 기숙사 | 오른쪽: 성격, (원하면 다른 항목도)
+        # 예시는 총 4줄 정도만 쓴 뒤 코드 블록으로 감쌉니다.
+        basic_left = [
+            ("이름", user_name),
+            ("기숙사", house if house else "미정")
+        ]
+        basic_right = [
+            ("성격", personality if personality else "미정"),
+            ("교육", f"{education}")  # 혹은 다른 항목
+        ]
+        # 두 리스트의 길이가 같아야 zip으로 묶어서 한 줄씩 출력 가능
+        # 길이가 안 맞으면 맞춰주세요(비거나, 더 적으면).
+        # 각 항목을 폭 8~10 정도로 맞춰 주면 깔끔.
 
-        # ────── [2] 능력치 필드 ──────
-        stats_info = (
-            f"**STR(근력)**: {strength}  |  **CON(건강)**: {constitution}  |  **DEX(민첩)**: {dexterity}\n"
-            f"**SIZ(크기)**: {size}        |  **APP(외모)**: {appearance}      |  **INT(지능)**: {intelligence}\n"
-            f"**POW(정신)**: {willpower}  |  **EDU(교육)**: {education}"
-        )
-        embed.add_field(name=":muscle: 능력치", value=stats_info, inline=False)
+        basic_info_lines = []
+        for (label1, val1), (label2, val2) in zip(basic_left, basic_right):
+            line = f"{label1:<6}: {val1:<10}   {label2:<6}: {val2}"
+            basic_info_lines.append(line)
 
-        # ────── [3] 전투/정신 필드 ──────
-        combat_info = (
-            f"**HP(체력)**: {hp}\n"
-            f"**MP(마력)**: {mp}\n"
-            f"**SAN(이성)**: {sanity}\n"
-            f"**LUK(행운)**: {luck}\n"
-            f"**MOV(이동력)**: {movement}\n"
-            f"**피해보너스(DB)**: {damage_bonus}\n"
-            f"**체구(BUILD)**: {build}"
-        )
-        embed.add_field(name=":shield: 생존/정신 정보", value=combat_info, inline=True)
+        # 코드 블록으로 묶어서 고정폭 폰트 적용
+        basic_info_block = "```" + "\n".join(basic_info_lines) + "```"
+        embed.add_field(name=":bust_in_silhouette: 기본 정보", value=basic_info_block, inline=False)
 
-        # ────── [4] 재화 필드 ──────
-        money_info = f"**{galleons} 갈레온 {sickles} 시클 {knuts} 크넛**"
-        embed.add_field(name=":moneybag: 보유 재화", value=money_info, inline=True)
+        # ───────────── [능력치] 2컬럼 예시 ─────────────
+        # 왼쪽에 STR,DEX,APP,POW / 오른쪽에 CON,SIZ,INT,EDU 등
+        stats_left = [
+            ("STR(근력)", strength),
+            ("DEX(민첩)", dexterity),
+            ("APP(외모)", appearance),
+            ("POW(정신)", willpower),
+        ]
+        stats_right = [
+            ("CON(건강)", constitution),
+            ("SIZ(크기)", size),
+            ("INT(지능)", intelligence),
+            ("EDU(교육)", education),
+        ]
 
-        # 임베드 전송 (개인 DM 비슷하게 보이도록 ephemeral=True)
+        stats_lines = []
+        for (label1, val1), (label2, val2) in zip(stats_left, stats_right):
+            # 왼쪽 폭 14 / 오른쪽 폭 14 정도로 맞춤 (원하는 대로 조정)
+            line = f"{label1:<10}: {str(val1):<3}   {label2:<10}: {str(val2)}"
+            stats_lines.append(line)
+
+        stats_block = "```" + "\n".join(stats_lines) + "```"
+        embed.add_field(name=":muscle: 능력치", value=stats_block, inline=False)
+
+        # ───────────── [전투/정신 정보] 2컬럼 ─────────────
+        # HP, MP, SAN, LUK, MOV, DB, BUILD 등등
+        # 필요에 따라 7개라 짝이 안 맞으면 빈 칸으로 맞춰도 되고,
+        # 3개 vs 4개 이런 식으로 분배할 수도 있습니다.
+        combat_left = [
+            ("HP(체력)", hp),
+            ("MP(마력)", mp),
+            ("SAN(이성)", sanity),
+        ]
+        combat_right = [
+            ("LUK(행운)", luck),
+            ("MOV(이동력)", movement),
+            ("DB(피해보너스)", damage_bonus),
+            ("BUILD(체구)", build),
+        ]
+        combat_lines = []
+        # zip()은 짧은쪽에 맞춰 돌아감 → 길이 다르면 주의
+        for (label1, val1), (label2, val2) in zip(combat_left, combat_right):
+            line = f"{label1:<12}: {val1:<3}   {label2:<14}: {val2}"
+            combat_lines.append(line)
+
+        # 만약 combat_right가 더 길다면 남은 아이템을 추가로 처리해야 함
+        # 여기서는 예시로 생략. 필요하면 while문 등에 넣어서 남은 부분도 출력 가능.
+
+        combat_block = "```" + "\n".join(combat_lines) + "```"
+        embed.add_field(name=":shield: 생존/정신 정보", value=combat_block, inline=False)
+
+        # ───────────── [재화] ─────────────
+        money_str = f"{galleons} 갈레온 {sickles} 시클 {knuts} 크넛"
+        embed.add_field(name=":moneybag: 보유 재화", value=f"```\n{money_str}\n```", inline=False)
+
+        # 임베드 전송(개인 메시지처럼 보이려면 ephemeral=True)
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
 
