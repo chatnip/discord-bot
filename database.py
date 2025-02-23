@@ -380,5 +380,3 @@ PERSONALITY_STATS = {
     "창의적":     {"strength": -10, "constitution": 0,  "size": 0,  "intelligence": 15,  "willpower": 0,   "dexterity": -10},
     "조용한":     {"strength": 0,   "constitution": 10, "size": 0,  "intelligence": 0,   "willpower": 10,  "dexterity": -15}
 }
-
-GM_ROLE_ID = 1343038882316423259

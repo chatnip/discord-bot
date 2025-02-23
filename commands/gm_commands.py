@@ -2,7 +2,7 @@ import discord
 from discord import app_commands
 from database import get_user, add_money, remove_money  # 데이터베이스 함수 가져오기
 
-GM_ROLE_ID = 123456789012345678  # 실제 디스코드 서버의 GM 역할 ID로 변경
+GM_ROLE_ID = 1343038882316423259
 
 class GMCommands(discord.app_commands.Group):
     """GM 전용 명령어 그룹"""
