@@ -26,41 +26,41 @@ def get_db_config():
 # ---------------------------------------
 # 1. 초기 테이블 생성 파트
 # ---------------------------------------
-try:
-    db_config = get_db_config()
-    conn = mysql.connector.connect(**db_config)
-    cursor = conn.cursor()
+# try:
+#     db_config = get_db_config()
+#     conn = mysql.connector.connect(**db_config)
+#     cursor = conn.cursor()
 
-    # 추가할 컬럼 리스트
-    new_columns = {
-        "luck": "INT DEFAULT 0",
-        "movement": "INT DEFAULT 0",
-        "damage_bonus": "VARCHAR(10) DEFAULT '0'",
-        "build": "INT DEFAULT 0",
-        "hp": "INT DEFAULT 0",
-        "mp": "INT DEFAULT 0",
-        "sanity": "INT DEFAULT 0"
-    }
+#     # 추가할 컬럼 리스트
+#     new_columns = {
+#         "luck": "INT DEFAULT 0",
+#         "movement": "INT DEFAULT 0",
+#         "damage_bonus": "VARCHAR(10) DEFAULT '0'",
+#         "build": "INT DEFAULT 0",
+#         "hp": "INT DEFAULT 0",
+#         "mp": "INT DEFAULT 0",
+#         "sanity": "INT DEFAULT 0"
+#     }
 
-    # 컬럼 추가 실행
-    for column, column_type in new_columns.items():
-        try:
-            cursor.execute(f"ALTER TABLE users ADD COLUMN {column} {column_type};")
-            conn.commit()
-            print(f"✅ {column} 컬럼 추가 완료!")
-        except mysql.connector.Error as e:
-            if f"Duplicate column name '{column}'" in str(e):
-                print(f"ℹ️ {column} 컬럼이 이미 존재합니다. 업데이트 생략.")
-            else:
-                print(f"❌ {column} 컬럼 추가 실패: {e}")
+#     # 컬럼 추가 실행
+#     for column, column_type in new_columns.items():
+#         try:
+#             cursor.execute(f"ALTER TABLE users ADD COLUMN {column} {column_type};")
+#             conn.commit()
+#             print(f"✅ {column} 컬럼 추가 완료!")
+#         except mysql.connector.Error as e:
+#             if f"Duplicate column name '{column}'" in str(e):
+#                 print(f"ℹ️ {column} 컬럼이 이미 존재합니다. 업데이트 생략.")
+#             else:
+#                 print(f"❌ {column} 컬럼 추가 실패: {e}")
 
-except Exception as e:
-    print(f"❌ MySQL 오류 발생: {e}")
+# except Exception as e:
+#     print(f"❌ MySQL 오류 발생: {e}")
 
-finally:
-    cursor.close()
-    conn.close()
-    print("🔌 MySQL 연결 종료")
+# finally:
+#     cursor.close()
+#     conn.close()
+#     print("🔌 MySQL 연결 종료")
 
 
 # ---------------------------------------

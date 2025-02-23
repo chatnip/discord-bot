@@ -7,7 +7,7 @@ GM_ROLE_ID = 123456789012345678  # 실제 디스코드 서버의 GM 역할 ID로
 class GMCommands(discord.app_commands.Group):
     """GM 전용 명령어 그룹"""
 
-    @app_commands.command(name="재화 지급", description="유저에게 재화를 지급합니다. (GM 전용)")
+    @app_commands.command(name="재화지급", description="유저에게 재화를 지급합니다. (GM 전용)")
     async def give_money(self, interaction: discord.Interaction, member: discord.Member, amount: int):
         """GM이 유저에게 재화 지급"""
         if GM_ROLE_ID not in [role.id for role in interaction.user.roles]:
@@ -34,7 +34,7 @@ class GMCommands(discord.app_commands.Group):
         else:
             await interaction.response.send_message("❌ 재화 지급에 실패했습니다.", ephemeral=True)
 
-    @app_commands.command(name="재화 차감", description="유저의 재화를 차감합니다. (GM 전용)")
+    @app_commands.command(name="재화차감", description="유저의 재화를 차감합니다. (GM 전용)")
     async def spend_money(self, interaction: discord.Interaction, member: discord.Member, amount: int):
         """GM이 유저 재화를 차감"""
         if GM_ROLE_ID not in [role.id for role in interaction.user.roles]:
