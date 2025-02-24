@@ -115,7 +115,7 @@ class ProfileCommands(discord.app_commands.Group):
             combat_lines.append(line)
 
         combat_block = "```" + "\n".join(combat_lines) + "```"
-        embed.add_field(name=":zigsaw: 보조 특성치", value=combat_block, inline=False)
+        embed.add_field(name=":jigsaw: 보조 특성치", value=combat_block, inline=False)
 
         # ────────── [4] 보유 재화 ──────────
         money_str = f"{galleons} 갈레온 {sickles} 시클 {knuts} 크넛"
