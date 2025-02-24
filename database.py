@@ -78,27 +78,24 @@ def register_user(user_id, user_name):
         luck_value = roll_luck()
 
         # 기본값 계산
-        base_strength = base_constitution = base_size = base_dexterity = base_willpower = 50
-        base_hp = (base_size + base_constitution) // 10
-        base_mp = base_willpower // 5
-        base_sanity = min(base_willpower, 99)  # 최대 99
+        base_strength = base_constitution = base_size = base_dexterity = base_willpower = base_appearance = base_education = 50
 
         cursor.execute(
-            "INSERT INTO users (id, name, house, personality, strength, constitution, size, dexterity, willpower, appearance, education, luck, hp, mp, sanity) "
-            "VALUES (%s, %s, NULL, NULL, %s, %s, %s, %s, %s, 50, 50, %s, %s, %s, %s)",
-            (user_id, user_name, base_strength, base_constitution, base_size, base_dexterity, base_willpower, luck_value, base_hp, base_mp, base_sanity)
+            "INSERT INTO users (id, name, house, personality,strength, constitution, size, dexterity, willpower, appearance, education, luck, hp, mp, sanity, status)"
+            "VALUES (%s, %s, NULL, NULL, %s, %s, %s, %s, %s, %s, %s, %s, 0, 0, 0, '정상')",
+            (user_id, user_name, base_strength, base_constitution, base_size, base_dexterity, base_willpower, base_appearance, base_education, luck_value)
         )
         conn.commit()
 
-        print(f"✅ 유저 등록 완료: {user_id} - {user_name}")
-
         updated = (cursor.rowcount > 0)
         if updated:
+            print(f"✅ 유저 등록 완료: {user_id} - {user_name}")
             calculate_derived_stats(user_id)
         return updated
     
     except mysql.connector.Error as e:
         print(f"❌ 유저 등록 실패: {e}")
+        return False
 
     finally:
         cursor.close()
@@ -318,28 +315,33 @@ def calculate_derived_stats(user_id):
         cursor = conn.cursor(dictionary=True)
 
         # 1) 현재 캐릭터 정보 가져오기
-        cursor.execute("SELECT strength, size, hp, sanity FROM users WHERE id = %s", (user_id,))
+        cursor.execute("SELECT strength, constitution, size, dexterity, willpower, hp, mp, sanity FROM users WHERE id = %s", (user_id,))
         row = cursor.fetchone()
         if not row:
             return False  # 없는 유저
 
         strength = row["strength"]
+        constitution = row["constitution"]
         size = row["size"]
-        hp = row["hp"]
-        sanity = row["sanity"]
+        dexterity = row["dexterity"]
+        willpower = row["willpower"]
 
-        # 2) 이동력(MOV) 계산
-        if strength < size and strength < size:
+        # 2) HP, MP, SAN 계산
+        #    (CoC 7판 기준 가정)
+        hp = (constitution + size) // 10
+        mp = willpower // 5
+        san = min(willpower, 99)  # 최대치 99로 가정
+
+        # 3) 이동력(MOV) 계산 예시
+        # (단순화: STR< SIZ and DEX< SIZ => mov=7,  STR> SIZ or DEX> SIZ => mov=9, else 8)
+        if strength < size and dexterity < size:
             mov = 7
-        elif strength > size or strength > size:
+        elif strength > size or dexterity > size:
             mov = 9
         else:
             mov = 8
         
-        # (주의) 위 공식에서는 DEX 고려가 없는데, 실제론 'DEX < SIZ'도 함께 보죠.
-        # 예: if (STR < SIZ) and (DEX < SIZ): mov = 7, 등으로 수정 가능.
-
-        # 3) DB & Build 계산
+        # 4) 피해 보너스(DB) & Build
         total_str_siz = strength + size
         if total_str_siz <= 64:
             damage_bonus = "-2d6"
@@ -357,28 +359,31 @@ def calculate_derived_stats(user_id):
             damage_bonus = "+1d6"
             build = 2
         else:
-            # 필요시 확장
             damage_bonus = "+2d6"
             build = 3
 
-        # 4) 상태(status) 계산
-        #    간단 예시: HP<1 → "빈사", SAN<=0 → "영구적 광기", 그 외 "정상"
+        # 5) 상태(status) 계산
+        # HP<1 => 빈사, SAN<=0 => 영구적 광기, 아니면 정상
+        # (여기서는 새로 계산된 hp, san을 기준으로 판단)
         if hp < 1:
             status = "빈사"
-        elif sanity <= 0:
+        elif san <= 0:
             status = "영구적 광기"
         else:
             status = "정상"
 
-        # 5) DB 업데이트
+        # 6) DB 업데이트
         cursor.execute("""
             UPDATE users
-            SET movement = %s,
+            SET hp = %s,
+                mp = %s,
+                sanity = %s,
+                movement = %s,
                 damage_bonus = %s,
                 build = %s,
                 status = %s
             WHERE id = %s
-        """, (mov, damage_bonus, build, status, user_id))
+        """, (hp, mp, san, mov, damage_bonus, build, status, user_id))
         conn.commit()
 
         return True
