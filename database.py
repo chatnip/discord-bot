@@ -285,7 +285,7 @@ def remove_money(user_id, amount):
         cursor.close()
         conn.close()
 
-def delete_user(user_id: str) -> bool:
+def delete_user(user_id):
     """DB에서 해당 유저(id)의 데이터를 삭제"""
     try:
         db_config = get_db_config()
