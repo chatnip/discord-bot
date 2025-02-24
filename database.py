@@ -26,25 +26,65 @@ def get_db_config():
 # ---------------------------------------
 # 1. 초기 테이블 생성 파트
 # ---------------------------------------
-# try:
-#     db_config = get_db_config()
-#     conn = mysql.connector.connect(**db_config)
-#     cursor = conn.cursor()
+try:
+    db_config = get_db_config()
+    conn = mysql.connector.connect(**db_config)
+    cursor = conn.cursor()
 
-#     try:
-#         cursor.execute(f"ALTER TABLE users ADD COLUMN status VARCHAR(50) DEFAULT '정상';")
-#         conn.commit()
-#         print(f"✅ 컬럼 추가 완료!")
-#     except mysql.connector.Error as e:
-#         print(f"❌ 컬럼 추가 실패: {e}")
+    try:
+        # 1) houses 테이블
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS houses (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                name VARCHAR(50) NOT NULL UNIQUE,
+                role_id BIGINT,
+                strength INT DEFAULT 0,
+                constitution INT DEFAULT 0,
+                size INT DEFAULT 0,
+                intelligence INT DEFAULT 0,
+                willpower INT DEFAULT 0,
+                dexterity INT DEFAULT 0
+            )
+        ''')
 
-# except Exception as e:
-#     print(f"❌ MySQL 오류 발생: {e}")
+        # 기숙사 4종 기본 데이터 삽입
+        # "INSERT IGNORE" => 이미 존재하면 무시
+        cursor.execute('''
+            INSERT IGNORE INTO houses (name, role_id, strength, constitution, size, intelligence, willpower, dexterity)
+            VALUES
+                ('그리핀도르', 1342843501645135933, 10,  0,  0, -5,  5,  0),
+                ('슬리데린',   1342843439578087445,  0,  0,  0, 10, -5,  0),
+                ('래번클로',   1342843569668489268, -5,  0,  0, 10,  0, -5),
+                ('후플푸프',   1342843627637968976,  0, 10,  0,  0, -5, -5)
+        ''')
 
-# finally:
-#     cursor.close()
-#     conn.close()
-#     print("🔌 MySQL 연결 종료")
+        # 2) personalities 테이블
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS personalities (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                name VARCHAR(50) NOT NULL UNIQUE,
+                strength INT DEFAULT 0,
+                constitution INT DEFAULT 0,
+                size INT DEFAULT 0,
+                intelligence INT DEFAULT 0,
+                willpower INT DEFAULT 0,
+                dexterity INT DEFAULT 0
+            )
+        ''')
+
+        conn.commit()
+        print("✅ 테이블 생성 & 초기 데이터 삽입 완료!")
+
+    except mysql.connector.Error as e:
+        print(f"❌ SQL 실행 실패: {e}")
+
+except Exception as e:
+    print(f"❌ MySQL 오류 발생: {e}")
+
+finally:
+    cursor.close()
+    conn.close()
+    print("🔌 MySQL 연결 종료")
 
 
 # ---------------------------------------
