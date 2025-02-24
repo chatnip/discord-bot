@@ -1,6 +1,6 @@
 import discord
 from discord import app_commands
-from database import get_user, update_user_name, update_user_size, update_user_house, update_user_appearance, update_user_personality, register_user, HOUSE_STATS, HOUSE_ROLES, PERSONALITY_STATS  # DB 함수 가져오기
+from database import get_user, update_user_name, update_user_size, update_user_house, update_user_appearance, update_user_personality, register_user, get_house_data, get_personality_data, get_all_house_roles  # DB 함수 가져오기
 
 class ProfileCommands(discord.app_commands.Group):
     """프로필 관련 명령어 그룹"""
@@ -125,9 +125,6 @@ class ProfileCommands(discord.app_commands.Group):
 
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
-
-
-
     @app_commands.command(name="이름변경", description="캐릭터 닉네임을 변경합니다.")
     async def change_profile(self, interaction: discord.Interaction, new_name: str):
         """유저 닉네임 정보를 변경하는 명령어"""
@@ -139,7 +136,6 @@ class ProfileCommands(discord.app_commands.Group):
             await interaction.response.send_message(f"✅ 이름이 `{new_name}`(으)로 변경되었습니다!", ephemeral=True)
         else:
             await interaction.response.send_message("❌ 등록된 정보가 없습니다! `/프로필 등록`을 먼저 해주세요.", ephemeral=True)
-
 
     @app_commands.command(name="크기변경", description="캐릭터 크기(SIZ) 스탯을 변경합니다.")
     async def change_size(self, interaction: discord.Interaction, new_size: int):
@@ -161,7 +157,6 @@ class ProfileCommands(discord.app_commands.Group):
         else:
             await interaction.response.send_message("❌ 크기(SIZ) 변경에 실패했습니다.", ephemeral=True)
 
-
     @app_commands.command(name="외모변경", description="캐릭터 외모(APP) 스탯을 변경합니다.")
     async def change_appearance(self, interaction: discord.Interaction, new_appearance: int):
         """유저가 직접 외모(APP)를 변경하는 명령어"""
@@ -181,7 +176,6 @@ class ProfileCommands(discord.app_commands.Group):
             await interaction.response.send_message(f"🎭 외모(APP)가 `{new_appearance}`(으)로 변경되었습니다!", ephemeral=True)
         else:
             await interaction.response.send_message("❌ 외모(APP) 변경에 실패했습니다.", ephemeral=True)
-
 
     @app_commands.command(name="기숙사선택", description="기숙사를 선택합니다.")
     async def select_house(self, interaction: discord.Interaction):
@@ -232,23 +226,28 @@ class HouseSelectionView(discord.ui.View):
 
     async def assign_house(self, interaction: discord.Interaction, house: str):
         """기숙사를 선택하면 DB 업데이트 후 역할 부여"""
-        guild = interaction.guild  # 서버 정보 가져오기
-        user = interaction.user  # 유저 정보 가져오기
-        role_id = HOUSE_ROLES.get(house)  # 선택한 기숙사 역할 ID 가져오기
-
-        if not role_id:
-            await interaction.response.send_message("❌ 해당 기숙사 역할을 찾을 수 없습니다.", ephemeral=True)
+        house_data = get_house_data(house)
+        if not house_data:
+            await interaction.response.send_message("❌ 해당 기숙사를 DB에서 찾을 수 없습니다.", ephemeral=True)
             return
 
-        role = guild.get_role(role_id)  # 역할 객체 가져오기
+        role_id = house_data["role_id"]
+        if not role_id:
+            await interaction.response.send_message("❌ 이 기숙사에 연결된 역할 ID가 없습니다.", ephemeral=True)
+            return
+
+        guild = interaction.guild
+        user = interaction.user
+        role = guild.get_role(role_id)
         if not role:
-            await interaction.response.send_message("❌ 해당 역할이 존재하지 않습니다. 서버 관리자에게 문의하세요.", ephemeral=True)
+            await interaction.response.send_message("❌ 해당 역할이 서버에 존재하지 않습니다. 관리자에게 문의해주세요.", ephemeral=True)
             return
 
         # 기존 기숙사 역할 제거
         try:
+            all_house_role_ids = get_all_house_roles()
             for r in user.roles:
-                if r.id in HOUSE_ROLES.values():  # 기존 기숙사 역할이 있으면 제거
+                if r.id in all_house_role_ids:
                     await user.remove_roles(r)
         except discord.Forbidden:
             await interaction.response.send_message("❌ 봇에게 역할을 제거할 권한이 없습니다. 관리자에게 문의하세요.", ephemeral=True)

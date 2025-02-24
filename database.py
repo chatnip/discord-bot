@@ -26,30 +26,30 @@ def get_db_config():
 # ---------------------------------------
 # 1. 초기 테이블 생성 파트
 # ---------------------------------------
-try:
-    db_config = get_db_config()
-    conn = mysql.connector.connect(**db_config)
-    cursor = conn.cursor()
+# try:
+#     db_config = get_db_config()
+#     conn = mysql.connector.connect(**db_config)
+#     cursor = conn.cursor()
 
-    try:
-        # 1) houses 테이블
-        cursor.execute('''
-            ALTER TABLE personalities DROP COLUMN size
-        ''')
+#     try:
+#         # 1) houses 테이블
+#         cursor.execute('''
+#             ALTER TABLE personalities DROP COLUMN size
+#         ''')
 
-        conn.commit()
-        print("✅ 테이블 삭제 완료!")
+#         conn.commit()
+#         print("✅ 테이블 삭제 완료!")
 
-    except mysql.connector.Error as e:
-        print(f"❌ SQL 실행 실패: {e}")
+#     except mysql.connector.Error as e:
+#         print(f"❌ SQL 실행 실패: {e}")
 
-except Exception as e:
-    print(f"❌ MySQL 오류 발생: {e}")
+# except Exception as e:
+#     print(f"❌ MySQL 오류 발생: {e}")
 
-finally:
-    cursor.close()
-    conn.close()
-    print("🔌 MySQL 연결 종료")
+# finally:
+#     cursor.close()
+#     conn.close()
+#     print("🔌 MySQL 연결 종료")
 
 
 # ---------------------------------------
@@ -160,41 +160,46 @@ def update_user_appearance(user_id, new_appearance):
         cursor.close()
         conn.close()
 
-def update_user_house(user_id, house):
+def update_user_house(user_id, house_name):
     """유저가 기숙사를 선택하면 해당 기숙사의 능력치를 반영"""
-    if house not in HOUSE_STATS:
-        return False  # 잘못된 기숙사 입력
+    house_data = get_house_data(house_name)
+    if not house_data:
+        return False  # 존재하지 않는 기숙사
 
-    stats = HOUSE_STATS[house]
+    # 2) 보정치 추출
+    strength_boost      = house_data["strength"]
+    constitution_boost  = house_data["constitution"]
+    size_boost          = house_data["size"]
+    intelligence_boost  = house_data["intelligence"]
+    willpower_boost     = house_data["willpower"]
+    dexterity_boost     = house_data["dexterity"]
 
     try:
         db_config = get_db_config()
         conn = mysql.connector.connect(**db_config)
         cursor = conn.cursor()
 
-        cursor.execute(
-            """
+        # 3) 유저 테이블 업데이트
+        cursor.execute("""
             UPDATE users
             SET house = %s,
-                strength = COALESCE(strength, 0) + %s,
-                constitution = COALESCE(constitution, 0) + %s,
-                size = COALESCE(size, 0) + %s,
-                intelligence = COALESCE(intelligence, 0) + %s,
-                willpower = COALESCE(willpower, 0) + %s,
-                dexterity = COALESCE(dexterity, 0) + %s
+                strength      = COALESCE(strength, 0) + %s,
+                constitution  = COALESCE(constitution, 0) + %s,
+                size          = COALESCE(size, 0) + %s,
+                intelligence  = COALESCE(intelligence, 0) + %s,
+                willpower     = COALESCE(willpower, 0) + %s,
+                dexterity     = COALESCE(dexterity, 0) + %s
             WHERE id = %s
-            """,
-            (
-                house,
-                stats["strength"],
-                stats["constitution"],
-                stats["size"],
-                stats["intelligence"],
-                stats["willpower"],
-                stats["dexterity"],
-                user_id,
-            )
-        )
+        """, (
+            house_name,
+            strength_boost,
+            constitution_boost,
+            size_boost,
+            intelligence_boost,
+            willpower_boost,
+            dexterity_boost,
+            user_id
+        ))
         conn.commit()
 
         updated = (cursor.rowcount > 0)
@@ -209,43 +214,49 @@ def update_user_house(user_id, house):
         cursor.close()
         conn.close()
 
-def update_user_personality(user_id, personality):
+def update_user_personality(user_id, personality_name):
     """유저가 성격을 선택하면 해당 성격의 능력치를 반영"""
-    if personality not in PERSONALITY_STATS:
-        return False  # 잘못된 성격 입력
+    personality_data = get_personality_data(personality_name)
+    if not personality_data:
+        return False  # 없는 성격
 
-    stats = PERSONALITY_STATS[personality]
+    # 보정치 추출
+    str_boost = personality_data["strength"]
+    con_boost = personality_data["constitution"]
+    int_boost = personality_data["intelligence"]
+    pow_boost = personality_data["willpower"]
+    dex_boost = personality_data["dexterity"]
 
     try:
         db_config = get_db_config()
         conn = mysql.connector.connect(**db_config)
         cursor = conn.cursor()
 
-        cursor.execute(
-            """
+        cursor.execute("""
             UPDATE users
             SET personality = %s,
-                strength = COALESCE(strength, 0) + %s,
+                strength     = COALESCE(strength, 0) + %s,
                 constitution = COALESCE(constitution, 0) + %s,
-                size = COALESCE(size, 0) + %s,
                 intelligence = COALESCE(intelligence, 0) + %s,
-                willpower = COALESCE(willpower, 0) + %s,
-                dexterity = COALESCE(dexterity, 0) + %s
+                willpower    = COALESCE(willpower, 0) + %s,
+                dexterity    = COALESCE(dexterity, 0) + %s
             WHERE id = %s
-            """,
-            (
-                personality,
-                stats["strength"],
-                stats["constitution"],
-                stats["size"],
-                stats["intelligence"],
-                stats["willpower"],
-                stats["dexterity"],
-                user_id,
-            )
-        )
+        """, (
+            personality_name,
+            str_boost,
+            con_boost,
+            int_boost,
+            pow_boost,
+            dex_boost,
+            user_id
+        ))
         conn.commit()
-        return cursor.rowcount > 0  # 업데이트 성공 여부 반환
+
+        updated = (cursor.rowcount > 0)
+        if updated:
+            calculate_derived_stats(user_id)
+        return updated
+    
     except mysql.connector.Error as e:
         print(f"❌ 성격 업데이트 실패: {e}")
         return False
@@ -399,86 +410,70 @@ def calculate_derived_stats(user_id):
         cursor.close()
         conn.close()
 
+def get_house_data(house_name: str):
+    """
+    DB의 houses 테이블에서 name이 house_name인 row를 가져옴.
+    반환: { 'name': str, 'role_id': int, 'strength': int, ... } 형태의 dict
+    """
+    try:
+        db_config = get_db_config()
+        conn = mysql.connector.connect(**db_config)
+        cursor = conn.cursor(dictionary=True)
+
+        query = "SELECT * FROM houses WHERE name = %s"
+        cursor.execute(query, (house_name,))
+        row = cursor.fetchone()  # dict 형태로 반환됨
+        return row  # 없다면 None
+    except mysql.connector.Error as e:
+        print(f"❌ get_house_data 실패: {e}")
+        return None
+    finally:
+        cursor.close()
+        conn.close()
+
+def get_personality_data(personality_name: str):
+    """
+    DB의 personalities 테이블에서 name이 personality_name인 row를 가져옴.
+    반환: { 'name': str, 'strength': int, ... } 형태의 dict
+    """
+    try:
+        db_config = get_db_config()
+        conn = mysql.connector.connect(**db_config)
+        cursor = conn.cursor(dictionary=True)
+
+        query = "SELECT * FROM personalities WHERE name = %s"
+        cursor.execute(query, (personality_name,))
+        row = cursor.fetchone()
+        return row
+    except mysql.connector.Error as e:
+        print(f"❌ get_personality_data 실패: {e}")
+        return None
+    finally:
+        cursor.close()
+        conn.close()
+
+def get_all_house_roles():
+    """
+    houses 테이블의 모든 row에서 role_id를 추출해
+    정수들의 리스트(혹은 세트)로 반환.
+    """
+    try:
+        db_config = get_db_config()
+        conn = mysql.connector.connect(**db_config)
+        cursor = conn.cursor()
+
+        cursor.execute("SELECT role_id FROM houses")
+        rows = cursor.fetchall()  # 예: [(1342...), (1342...), (None)...]
+
+        # role_id가 None인 경우도 있을 수 있으니 필터링
+        role_ids = [row[0] for row in rows if row[0] is not None]
+        return role_ids
+
+    except mysql.connector.Error as e:
+        print(f"❌ get_all_house_roles 실패: {e}")
+        return []
+    finally:
+        cursor.close()
+        conn.close()
 
 
-
-
-
-
-
-# ---------------------------------------
-# 3. 스탯 딕셔너리들
-# ---------------------------------------
-HOUSE_STATS = {
-    "그리핀도르": {
-        "strength": 10,
-        "constitution": 0,
-        "size": 0,
-        "intelligence": -5,
-        "willpower": 5,
-        "dexterity": 0
-    },
-    "슬리데린": {
-        "strength": 0,
-        "constitution": 0,
-        "size": 0,
-        "intelligence": 10,
-        "willpower": -5,
-        "dexterity": 0
-    },
-    "래번클로": {
-        "strength": -5,
-        "constitution": 0,
-        "size": 0,
-        "intelligence": 10,
-        "willpower": 0,
-        "dexterity": -5
-    },
-    "후플푸프": {
-        "strength": 0,
-        "constitution": 10,
-        "size": 0,
-        "intelligence": 0,
-        "willpower": -5,
-        "dexterity": -5
-    }
-}
-
-HOUSE_ROLES = {
-    "그리핀도르": 1342843501645135933,
-    "슬리데린": 1342843439578087445,
-    "래번클로": 1342843569668489268,
-    "후플푸프": 1342843627637968976
-}
-
-PERSONALITY_STATS = {
-    "대담한":     {"strength": 15,  "constitution": 0,  "size": 0,  "intelligence": -10, "willpower": 10,  "dexterity": 0},
-    "신중한":     {"strength": -10, "constitution": 10, "size": 0,  "intelligence": 15,  "willpower": -10, "dexterity": 0},
-    "정확한":     {"strength": 0,   "constitution": 0,  "size": 0,  "intelligence": 10,  "willpower": 10,  "dexterity": -15},
-    "용감한":     {"strength": 10,  "constitution": 10, "size": 0,  "intelligence": 0,   "willpower": 0,   "dexterity": -10},
-    "냉정한":     {"strength": 0,   "constitution": 0,  "size": 0,  "intelligence": -10, "willpower": 15,  "dexterity": -5},
-    "활발한":     {"strength": 0,   "constitution": -10,"size": 0,  "intelligence": 0,   "willpower": 0,   "dexterity": 15},
-    "지적인":     {"strength": -10, "constitution": 0,  "size": 0,  "intelligence": 15,  "willpower": 0,   "dexterity": -10},
-    "온화한":     {"strength": 0,   "constitution": 10, "size": 0,  "intelligence": 0,   "willpower": 10,  "dexterity": -15},
-    "신뢰감":     {"strength": 0,   "constitution": 0,  "size": 0,  "intelligence": 10,  "willpower": -10, "dexterity": 10},
-    "자립적":     {"strength": 10,  "constitution": -10,"size": 0,  "intelligence": 0,   "willpower": 0,   "dexterity": 0},
-    "논리적":     {"strength": -10, "constitution": 0,  "size": 0,  "intelligence": 15,  "willpower": 0,   "dexterity": -10},
-    "감성적":     {"strength": 0,   "constitution": 0,  "size": 0,  "intelligence": -10, "willpower": 10,  "dexterity": 10},
-    "차분한":     {"strength": 0,   "constitution": 10, "size": 0,  "intelligence": 0,   "willpower": 10,  "dexterity": -15},
-    "유연한":     {"strength": 0,   "constitution": 0,  "size": 0,  "intelligence": 10,  "willpower": 0,   "dexterity": 10},
-    "책임감":     {"strength": 10,  "constitution": 10, "size": 0,  "intelligence": -10, "willpower": 0,   "dexterity": -10},
-    "집중력":     {"strength": 0,   "constitution": 0,  "size": 0,  "intelligence": 15,  "willpower": -10, "dexterity": -10},
-    "유머감":     {"strength": 0,   "constitution": 0,  "size": 0,  "intelligence": -10, "willpower": 10,  "dexterity": 10},
-    "도전적":     {"strength": 10,  "constitution": 0,  "size": 0,  "intelligence": 0,   "willpower": 10,  "dexterity": -10},
-    "사교적":     {"strength": 0,   "constitution": 0,  "size": 0,  "intelligence": -10, "willpower": 0,   "dexterity": 15},
-    "직관적":     {"strength": 0,   "constitution": 0,  "size": 0,  "intelligence": -10, "willpower": 10,  "dexterity": 10},
-    "도덕적":     {"strength": -10, "constitution": 10, "size": 0,  "intelligence": 10,  "willpower": 0,   "dexterity": -10},
-    "공감형":     {"strength": 0,   "constitution": 0,  "size": 0,  "intelligence": -10, "willpower": 10,  "dexterity": 10},
-    "완벽한":     {"strength": 0,   "constitution": 0,  "size": 0,  "intelligence": 10,  "willpower": -10, "dexterity": 10},
-    "적극적":     {"strength": 10,  "constitution": 0,  "size": 0,  "intelligence": -10, "willpower": 0,   "dexterity": 10},
-    "성실한":     {"strength": 10,  "constitution": 10, "size": 0,  "intelligence": 0,   "willpower": 0,   "dexterity": -15},
-    "즉흥적":     {"strength": 0,   "constitution": -10,"size": 0,  "intelligence": -10, "willpower": 0,   "dexterity": 15},
-    "긍정적":     {"strength": 0,   "constitution": 0,  "size": 0,  "intelligence": -10, "willpower": 10,  "dexterity": 10},
-    "창의적":     {"strength": -10, "constitution": 0,  "size": 0,  "intelligence": 15,  "willpower": 0,   "dexterity": -10},
-    "조용한":     {"strength": 0,   "constitution": 10, "size": 0,  "intelligence": 0,   "willpower": 10,  "dexterity": -15}
-}
