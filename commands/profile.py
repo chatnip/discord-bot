@@ -1,6 +1,6 @@
 import discord
 from discord import app_commands
-from database import get_user, update_user_name, update_user_size, update_user_house, update_user_appearance, update_user_personality, register_user, get_house_data, get_personality_data, get_all_house_roles  # DB 함수 가져오기
+from database import get_user, update_user_name, update_user_size, update_user_house, update_user_appearance, update_user_personalities, register_user, get_house_data, get_personality_list, get_all_house_roles  # DB 함수 가져오기
 
 class ProfileCommands(discord.app_commands.Group):
     """프로필 관련 명령어 그룹"""
@@ -192,16 +192,29 @@ class ProfileCommands(discord.app_commands.Group):
 
     @app_commands.command(name="성격선택", description="성격을 선택합니다.")
     async def select_personality(self, interaction: discord.Interaction):
-        """성격 선택 버튼을 보여주는 명령어"""
         user_id = str(interaction.user.id)
         user_data = get_user(user_id)
-
         if not user_data:
             await interaction.response.send_message("❌ 등록된 정보가 없습니다! `/프로필 등록`을 먼저 해주세요.", ephemeral=True)
             return
+        
+        personality = user_data[3]  # (id, name, house, personality, ...라 가정)
 
-        view = PersonalitySelectionView(user_id)  # 동적으로 버튼 생성
-        await interaction.response.send_message("😃 **성격을 선택하세요!**", view=view, ephemeral=True)
+        # 이미 personality가 None이 아니거나 빈 문자열("")이 아니라면 “이미 성격 선택”
+        if personality is not None and personality != "":
+            await interaction.response.send_message("❌ 이미 성격을 선택하셨습니다. 다시 변경할 수 없습니다!", ephemeral=True)
+            return
+
+        # DB에서 personalities 목록을 가져온다 (29개 전부 or 일부)
+        # 여기서는 예시로 전부 가져온다고 가정
+        personalities = get_personality_list(limit=29)  
+        if not personalities:
+            await interaction.response.send_message("❌ 불러올 수 있는 성격 데이터가 없습니다.", ephemeral=True)
+            return
+
+        view = PersonalitySelectionView(user_id, personalities)
+        await interaction.response.send_message("**최대 4개의 성격을 선택하세요!**", view=view, ephemeral=True)
+
 
 class HouseSelectionView(discord.ui.View):
     def __init__(self, user_id):
@@ -279,6 +292,64 @@ class HouseSelectionView(discord.ui.View):
                 )
         else:
             await interaction.response.send_message("❌ 기숙사 업데이트에 실패했습니다. 관리자에게 문의하세요.", ephemeral=True)
+
+class PersonalitySelectionView(discord.ui.View):
+    def __init__(self, user_id: str, personalities: list[dict]):
+        """
+        personalities: DB에서 가져온 성격 리스트 (예: [{ 'name': '대담한', ...}, ...])
+        """
+        super().__init__(timeout=60)
+        self.user_id = user_id
+
+        # Select Menu 생성
+        options = []
+        for p in personalities:
+            # SelectOption(label='대담한', description='...', value='대담한')
+            opt_label = p["name"]
+            opt_value = p["name"]  # value로도 동일한 이름
+            options.append(discord.SelectOption(label=opt_label, value=opt_value))
+
+        self.select = PersonalitySelect(options, placeholder="최대 4개의 성격을 선택하세요!")
+        self.add_item(self.select)  # View에 Select 추가
+
+    async def on_timeout(self):
+        # 타임아웃 시 select 비활성화
+        for child in self.children:
+            if isinstance(child, PersonalitySelect):
+                child.disabled = True
+
+class PersonalitySelect(discord.ui.Select):
+    def __init__(self, options):
+        super().__init__(
+            placeholder="원하는 성격을 선택하세요!",
+            min_values=1,
+            max_values=4,
+            options=options
+        )
+
+    async def callback(self, interaction: discord.Interaction):
+        # 사용자가 선택한 값들(self.values)은 list[str]
+        selected_personalities = self.values  # 최대 4개
+        user_id = self.view.user_id
+
+        # DB 반영
+        success = update_user_personalities(user_id, selected_personalities)
+        if success:
+            await interaction.response.send_message(
+                f"성격 `{', '.join(selected_personalities)}` 이(가) 적용되었습니다!",
+                ephemeral=True
+            )
+        else:
+            await interaction.response.send_message(
+                "❌ 성격 업데이트에 실패했습니다.",
+                ephemeral=True
+            )
+
+        # 선택 후 UI 비활성화
+        self.disabled = True
+        await interaction.message.edit(view=self.view)
+
+
 
 # 명령어 그룹 객체 생성
 profile_group = ProfileCommands(name="프로필", description="프로필 관련 명령어 그룹")

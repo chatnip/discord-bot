@@ -26,29 +26,29 @@ def get_db_config():
 # ---------------------------------------
 # 1. 초기 테이블 생성 파트
 # ---------------------------------------
-try:
-    db_config = get_db_config()
-    conn = mysql.connector.connect(**db_config)
-    cursor = conn.cursor()
+# try:
+#     db_config = get_db_config()
+#     conn = mysql.connector.connect(**db_config)
+#     cursor = conn.cursor()
 
-    try:
-        cursor.execute('''
-            ALTER TABLE users MODIFY COLUMN personality VARCHAR(255) DEFAULT NULL
-        ''')
+#     try:
+#         cursor.execute('''
+#             ALTER TABLE users MODIFY COLUMN personality VARCHAR(255) DEFAULT NULL
+#         ''')
 
-        conn.commit()
-        print("✅ 문자열 길이 늘이기기 완료!")
+#         conn.commit()
+#         print("✅ 문자열 길이 늘이기기 완료!")
 
-    except mysql.connector.Error as e:
-        print(f"❌ SQL 실행 실패: {e}")
+#     except mysql.connector.Error as e:
+#         print(f"❌ SQL 실행 실패: {e}")
 
-except Exception as e:
-    print(f"❌ MySQL 오류 발생: {e}")
+# except Exception as e:
+#     print(f"❌ MySQL 오류 발생: {e}")
 
-finally:
-    cursor.close()
-    conn.close()
-    print("🔌 MySQL 연결 종료")
+# finally:
+#     cursor.close()
+#     conn.close()
+#     print("🔌 MySQL 연결 종료")
 
 
 # ---------------------------------------
@@ -213,25 +213,48 @@ def update_user_house(user_id, house_name):
         cursor.close()
         conn.close()
 
-def update_user_personality(user_id, personality_name):
-    """유저가 성격을 선택하면 해당 성격의 능력치를 반영"""
-    personality_data = get_personality_data(personality_name)
-    if not personality_data:
-        return False  # 없는 성격
+def update_user_personalities(user_id: str, personality_list: list[str]) -> bool:
+    """
+    유저에게 복수의 성격을 적용:
+    1) personalities 테이블에서 personality_list 각 항목에 해당하는 보정치 조회
+    2) 모두 합산하여 users 테이블에 반영
+    3) user의 personality 컬럼에는 '성격1,성격2,성격3,성격4' 식으로 저장
+    """
+    if not personality_list:
+        return False  # 빈 리스트면 처리 안 함
 
-    # 보정치 추출
-    str_boost = personality_data["strength"]
-    con_boost = personality_data["constitution"]
-    int_boost = personality_data["intelligence"]
-    pow_boost = personality_data["willpower"]
-    dex_boost = personality_data["dexterity"]
-
+    # 1) DB 연결
     try:
         db_config = get_db_config()
         conn = mysql.connector.connect(**db_config)
-        cursor = conn.cursor()
+        cursor = conn.cursor(dictionary=True)
 
-        cursor.execute("""
+        # 2) 성격 데이터 전부 로드해서 합산
+        # ex) SELECT * FROM personalities WHERE name IN ('대담한','신중한','...')
+        in_clause = ",".join(["%s"] * len(personality_list))  # (%s,%s,%s,%s)
+        query = f"SELECT * FROM personalities WHERE name IN ({in_clause})"
+        cursor.execute(query, tuple(personality_list))
+        rows = cursor.fetchall()  # [{}, {}, ...]
+
+        # 실제로 존재하지 않는 이름이 있으면 rows 갯수가 줄어들 수 있음
+        if not rows:
+            return False
+
+        # 보정치 합계
+        total_str = total_con = total_int = total_pow = total_dex = 0
+        for row in rows:
+            total_str += row["strength"]
+            total_con += row["constitution"]
+            total_int += row["intelligence"]
+            total_pow += row["willpower"]
+            total_dex += row["dexterity"]
+
+        # 3) 유저 테이블 업데이트
+        #    기존 스탯에 합산
+        #    personality 컬럼에는 콤마로 연결한 문자열 저장
+        personality_str = ",".join(personality_list)
+
+        update_query = """
             UPDATE users
             SET personality = %s,
                 strength     = COALESCE(strength, 0) + %s,
@@ -240,25 +263,45 @@ def update_user_personality(user_id, personality_name):
                 willpower    = COALESCE(willpower, 0) + %s,
                 dexterity    = COALESCE(dexterity, 0) + %s
             WHERE id = %s
-        """, (
-            personality_name,
-            str_boost,
-            con_boost,
-            int_boost,
-            pow_boost,
-            dex_boost,
+        """
+
+        cursor.execute(update_query, (
+            personality_str,
+            total_str,
+            total_con,
+            total_int,
+            total_pow,
+            total_dex,
             user_id
         ))
         conn.commit()
 
         updated = (cursor.rowcount > 0)
         if updated:
+            # 보조 스탯 재계산 (HP, MOV 등)
             calculate_derived_stats(user_id)
+
         return updated
-    
+
     except mysql.connector.Error as e:
-        print(f"❌ 성격 업데이트 실패: {e}")
+        print(f"❌ update_user_personalities 실패: {e}")
         return False
+    finally:
+        cursor.close()
+        conn.close()
+
+def get_personality_list(limit=29):
+    try:
+        db_config = get_db_config()
+        conn = mysql.connector.connect(**db_config)
+        cursor = conn.cursor(dictionary=True)
+
+        cursor.execute("SELECT name, strength, constitution, intelligence, willpower, dexterity FROM personalities LIMIT %s", (limit,))
+        rows = cursor.fetchall()
+        return rows
+    except mysql.connector.Error as e:
+        print(f"❌ get_personality_list 실패: {e}")
+        return []
     finally:
         cursor.close()
         conn.close()
