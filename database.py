@@ -83,7 +83,6 @@ def get_user(user_id):
         cursor.close()
         conn.close()
 
-
 def register_user(user_id, user_name):
     """유저 등록"""
     try:
@@ -114,7 +113,6 @@ def register_user(user_id, user_name):
     finally:
         cursor.close()
         conn.close()
-
 
 def update_user_name(user_id, new_name):
     """유저 이름 변경"""
@@ -148,7 +146,6 @@ def update_user_size(user_id, new_size):
         cursor.close()
         conn.close()
 
-
 def update_user_appearance(user_id, new_appearance):
     """유저가 외모(appearance) 값을 변경"""
     try:
@@ -165,8 +162,6 @@ def update_user_appearance(user_id, new_appearance):
     finally:
         cursor.close()
         conn.close()
-
-
 
 def update_user_house(user_id, house):
     """유저가 기숙사를 선택하면 해당 기숙사의 능력치를 반영"""
@@ -212,7 +207,6 @@ def update_user_house(user_id, house):
         cursor.close()
         conn.close()
 
-
 def update_user_personality(user_id, personality):
     """유저가 성격을 선택하면 해당 성격의 능력치를 반영"""
     if personality not in PERSONALITY_STATS:
@@ -257,10 +251,6 @@ def update_user_personality(user_id, personality):
         cursor.close()
         conn.close()
 
-
-
-
-
 def add_money(user_id, amount):
     """유저에게 재화 추가 (크넛 단위)"""
     try:
@@ -277,7 +267,6 @@ def add_money(user_id, amount):
     finally:
         cursor.close()
         conn.close()
-
 
 def remove_money(user_id, amount):
     """유저 재화 감소 (최소 0 유지)"""
@@ -296,13 +285,27 @@ def remove_money(user_id, amount):
         cursor.close()
         conn.close()
 
+def delete_user(user_id: str) -> bool:
+    """DB에서 해당 유저(id)의 데이터를 삭제"""
+    try:
+        db_config = get_db_config()
+        conn = mysql.connector.connect(**db_config)
+        cursor = conn.cursor()
 
+        cursor.execute("DELETE FROM users WHERE id = %s", (user_id,))
+        conn.commit()
 
+        return cursor.rowcount > 0  # 삭제된 row가 있으면 True 반환
+    except mysql.connector.Error as e:
+        print(f"❌ 유저 삭제 실패: {e}")
+        return False
+    finally:
+        cursor.close()
+        conn.close()
 
 def roll_luck():
     """3d6 * 5 행운값 굴리기"""
     return sum(random.randint(1, 6) for _ in range(3)) * 5
-
 
 # ---------------------------------------
 # 3. 스탯 딕셔너리들

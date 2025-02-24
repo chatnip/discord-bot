@@ -18,52 +18,6 @@ class ProfileCommands(discord.app_commands.Group):
             register_user(user_id, user_name)
             await interaction.response.send_message(f"🎉 등록 완료! 환영합니다, **{user_name}**!", ephemeral=True)
 
-    # @app_commands.command(name="조회", description="내 프로필 정보를 확인합니다.")
-    # async def view_profile(self, interaction: discord.Interaction):
-    #     """유저 프로필을 확인하는 명령어"""
-    #     user_id = str(interaction.user.id)
-    #     user_data = get_user(user_id)
-
-    #     if user_data:
-    #         (user_name, house, personality, strength, constitution, size, intelligence,
-    #         willpower, dexterity, appearance, education, money, luck, movement, damage_bonus,
-    #         build, hp, mp, sanity) = user_data[1:]
-
-    #         galleons = money // 493  # 1 갈레온 = 493 크넛
-    #         remainder = money % 493
-    #         sickles = remainder // 29  # 1 시클 = 29 크넛
-    #         knuts = remainder % 29  # 나머지 크넛
-
-    #         embed = discord.Embed(title="📜 내 프로필", color=0x3498db)
-
-    #         embed.add_field(name="이름", value=user_name, inline=False)
-    #         embed.add_field(name="🏠 기숙사", value=house if house else "미정", inline=False)
-    #         embed.add_field(name="🙂 성격", value=personality if personality else "미정", inline=False)
-
-    #         embed.add_field(name="💪 근력 (STR)", value=str(strength), inline=True)
-    #         embed.add_field(name="❤️ 건강 (CON)", value=str(constitution), inline=True)
-    #         embed.add_field(name="📏 크기 (SIZ)", value=str(size), inline=True)
-    #         embed.add_field(name="⚡ 민첩 (DEX)", value=str(dexterity), inline=True)
-    #         embed.add_field(name="🎭 외모 (APP)", value=str(appearance), inline=True)
-    #         embed.add_field(name="🧠 지능 (INT)", value=str(intelligence), inline=True)
-    #         embed.add_field(name="🛡️ 정신 (POW)", value=str(willpower), inline=True)
-    #         embed.add_field(name="📖 교육 (EDU)", value=str(education), inline=True)
-
-    #         embed.add_field(name="🍀 행운 (LUK)", value=str(luck), inline=True)
-    #         embed.add_field(name="🏃 이동력 (MOV)", value=str(movement), inline=True)
-    #         embed.add_field(name="🛡️ 피해보너스 (DB)", value=str(damage_bonus), inline=True)
-    #         embed.add_field(name="📏 체구 (BUILD)", value=str(build), inline=True)
-    #         embed.add_field(name="🛡️ 체력 (HP)", value=str(hp), inline=True)
-    #         embed.add_field(name="🔮 마력 (MP)", value=str(mp), inline=True)
-    #         embed.add_field(name="🛡️ 이성 (SAN)", value=str(sanity), inline=True)
-
-    #         embed.add_field(name="💰 재화", value=f"{galleons} 갈레온 {sickles} 시클 {knuts} 크넛", inline=False)
-
-    #         await interaction.response.send_message(embed=embed, ephemeral=True)
-    #     else:
-    #         await interaction.response.send_message("❌ 등록된 정보가 없습니다! `/프로필 등록`을 먼저 해주세요.", ephemeral=True)
-
-
     @app_commands.command(name="조회", description="내 프로필 정보를 확인합니다.")
     async def view_profile(self, interaction: discord.Interaction):
         """유저 프로필(탐사자 정보)을 확인하는 명령어"""
@@ -114,7 +68,7 @@ class ProfileCommands(discord.app_commands.Group):
         # ────────── [1] 기본 정보 (코드 블록) ──────────
         basic_info_lines = []
         basic_info_lines.append(f"이름   : {user_name}")
-        basic_info_lines.append(f"기숙사 : {house or '미정'}")
+        basic_info_lines.append(f"소속   : {house or '미정'}")
         basic_info_lines.append(f"성격   : {personality or '미정'}")
 
         basic_info_block = "```" + "\n".join(basic_info_lines) + "```"
@@ -141,7 +95,7 @@ class ProfileCommands(discord.app_commands.Group):
             stats_lines.append(line)
 
         stats_block = "```" + "\n".join(stats_lines) + "```"
-        embed.add_field(name=":muscle: 특성치", value=stats_block, inline=False)
+        embed.add_field(name=":star: 특성치", value=stats_block, inline=False)
 
         # ────────── [3] 보조 특성치 (코드 블록, 공백 축소) ──────────
         combat_left = [
@@ -161,7 +115,7 @@ class ProfileCommands(discord.app_commands.Group):
             combat_lines.append(line)
 
         combat_block = "```" + "\n".join(combat_lines) + "```"
-        embed.add_field(name=":shield: 보조 특성치", value=combat_block, inline=False)
+        embed.add_field(name=":zigsaw: 보조 특성치", value=combat_block, inline=False)
 
         # ────────── [4] 보유 재화 ──────────
         money_str = f"{galleons} 갈레온 {sickles} 시클 {knuts} 크넛"
