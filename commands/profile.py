@@ -92,7 +92,7 @@ class ProfileCommands(discord.app_commands.Group):
 
         stats_lines = []
         for (label1, val1), (label2, val2) in zip(stats_left, stats_right):
-            line = f"{label1:<9}: {val1:<2}  {label2:<9}: {val2}"
+            line = f"{label1:<9}: {val1:<4}  {label2:<9}: {val2}"
             stats_lines.append(line)
 
         stats_block = "```" + "\n".join(stats_lines) + "```"
@@ -103,7 +103,7 @@ class ProfileCommands(discord.app_commands.Group):
             ("HP(체력)", hp),
             ("MP(마력)", mp),
             ("SAN(이성)", sanity),
-            ("ST(상태)", status),
+            ("STA(상태)", status),
         ]
         combat_right = [
             ("LUK(행운)", luck),
@@ -113,7 +113,7 @@ class ProfileCommands(discord.app_commands.Group):
         ]
         combat_lines = []
         for (label1, val1), (label2, val2) in zip(combat_left, combat_right):
-            line = f"{label1:<12}: {val1:<2} {label2:<12}: {val2}"
+            line = f"{label1:<9}: {val1:<4} {label2:<9}: {val2}"
             combat_lines.append(line)
 
         combat_block = "```" + "\n".join(combat_lines) + "```"

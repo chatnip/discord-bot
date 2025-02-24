@@ -26,30 +26,29 @@ def get_db_config():
 # ---------------------------------------
 # 1. 초기 테이블 생성 파트
 # ---------------------------------------
-# try:
-#     db_config = get_db_config()
-#     conn = mysql.connector.connect(**db_config)
-#     cursor = conn.cursor()
+try:
+    db_config = get_db_config()
+    conn = mysql.connector.connect(**db_config)
+    cursor = conn.cursor()
 
-#     try:
-#         # 1) houses 테이블
-#         cursor.execute('''
-#             ALTER TABLE personalities DROP COLUMN size
-#         ''')
+    try:
+        cursor.execute('''
+            ALTER TABLE users MODIFY COLUMN personality VARCHAR(255) DEFAULT NULL
+        ''')
 
-#         conn.commit()
-#         print("✅ 테이블 삭제 완료!")
+        conn.commit()
+        print("✅ 문자열 길이 늘이기기 완료!")
 
-#     except mysql.connector.Error as e:
-#         print(f"❌ SQL 실행 실패: {e}")
+    except mysql.connector.Error as e:
+        print(f"❌ SQL 실행 실패: {e}")
 
-# except Exception as e:
-#     print(f"❌ MySQL 오류 발생: {e}")
+except Exception as e:
+    print(f"❌ MySQL 오류 발생: {e}")
 
-# finally:
-#     cursor.close()
-#     conn.close()
-#     print("🔌 MySQL 연결 종료")
+finally:
+    cursor.close()
+    conn.close()
+    print("🔌 MySQL 연결 종료")
 
 
 # ---------------------------------------
