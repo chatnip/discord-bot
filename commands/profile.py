@@ -50,7 +50,8 @@ class ProfileCommands(discord.app_commands.Group):
             build,
             hp,
             mp,
-            sanity
+            sanity,
+            status
         ) = user_data[1:]
 
         # 재화 환산
@@ -102,6 +103,7 @@ class ProfileCommands(discord.app_commands.Group):
             ("HP(체력)", hp),
             ("MP(마력)", mp),
             ("SAN(이성)", sanity),
+            ("STAT(상태)", status),
         ]
         combat_right = [
             ("LUK(행운)", luck),

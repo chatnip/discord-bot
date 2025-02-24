@@ -26,25 +26,25 @@ def get_db_config():
 # ---------------------------------------
 # 1. 초기 테이블 생성 파트
 # ---------------------------------------
-try:
-    db_config = get_db_config()
-    conn = mysql.connector.connect(**db_config)
-    cursor = conn.cursor()
+# try:
+#     db_config = get_db_config()
+#     conn = mysql.connector.connect(**db_config)
+#     cursor = conn.cursor()
 
-    try:
-        cursor.execute(f"ALTER TABLE users ADD COLUMN status VARCHAR(50) DEFAULT '정상';")
-        conn.commit()
-        print(f"✅ 컬럼 추가 완료!")
-    except mysql.connector.Error as e:
-        print(f"❌ 컬럼 추가 실패: {e}")
+#     try:
+#         cursor.execute(f"ALTER TABLE users ADD COLUMN status VARCHAR(50) DEFAULT '정상';")
+#         conn.commit()
+#         print(f"✅ 컬럼 추가 완료!")
+#     except mysql.connector.Error as e:
+#         print(f"❌ 컬럼 추가 실패: {e}")
 
-except Exception as e:
-    print(f"❌ MySQL 오류 발생: {e}")
+# except Exception as e:
+#     print(f"❌ MySQL 오류 발생: {e}")
 
-finally:
-    cursor.close()
-    conn.close()
-    print("🔌 MySQL 연결 종료")
+# finally:
+#     cursor.close()
+#     conn.close()
+#     print("🔌 MySQL 연결 종료")
 
 
 # ---------------------------------------
@@ -89,8 +89,14 @@ def register_user(user_id, user_name):
             (user_id, user_name, base_strength, base_constitution, base_size, base_dexterity, base_willpower, luck_value, base_hp, base_mp, base_sanity)
         )
         conn.commit()
+
         print(f"✅ 유저 등록 완료: {user_id} - {user_name}")
 
+        updated = (cursor.rowcount > 0)
+        if updated:
+            calculate_derived_stats(user_id)
+        return updated
+    
     except mysql.connector.Error as e:
         print(f"❌ 유저 등록 실패: {e}")
 
@@ -122,7 +128,12 @@ def update_user_size(user_id, new_size):
 
         cursor.execute("UPDATE users SET size = %s WHERE id = %s", (new_size, user_id))
         conn.commit()
-        return cursor.rowcount > 0  # 업데이트 성공 여부 반환
+
+        updated = (cursor.rowcount > 0)
+        if updated:
+            calculate_derived_stats(user_id)
+        return updated
+
     except mysql.connector.Error as e:
         print(f"❌ 크기(size) 변경 실패: {e}")
         return False
@@ -183,7 +194,12 @@ def update_user_house(user_id, house):
             )
         )
         conn.commit()
-        return cursor.rowcount > 0  # 업데이트 성공 여부 반환
+
+        updated = (cursor.rowcount > 0)
+        if updated:
+            calculate_derived_stats(user_id)
+        return updated
+    
     except mysql.connector.Error as e:
         print(f"❌ 기숙사 업데이트 실패: {e}")
         return False
@@ -290,6 +306,95 @@ def delete_user(user_id):
 def roll_luck():
     """3d6 * 5 행운값 굴리기"""
     return sum(random.randint(1, 6) for _ in range(3)) * 5
+
+def calculate_derived_stats(user_id):
+    """
+    유저의 STR, SIZ, HP, SAN 등을 바탕으로 MOV, DB, Build, 상태(status)를 재계산하여 DB에 반영.
+    성공하면 True, 실패면 False.
+    """
+    try:
+        db_config = get_db_config()
+        conn = mysql.connector.connect(**db_config)
+        cursor = conn.cursor(dictionary=True)
+
+        # 1) 현재 캐릭터 정보 가져오기
+        cursor.execute("SELECT strength, size, hp, sanity FROM users WHERE id = %s", (user_id,))
+        row = cursor.fetchone()
+        if not row:
+            return False  # 없는 유저
+
+        strength = row["strength"]
+        size = row["size"]
+        hp = row["hp"]
+        sanity = row["sanity"]
+
+        # 2) 이동력(MOV) 계산
+        if strength < size and strength < size:
+            mov = 7
+        elif strength > size or strength > size:
+            mov = 9
+        else:
+            mov = 8
+        
+        # (주의) 위 공식에서는 DEX 고려가 없는데, 실제론 'DEX < SIZ'도 함께 보죠.
+        # 예: if (STR < SIZ) and (DEX < SIZ): mov = 7, 등으로 수정 가능.
+
+        # 3) DB & Build 계산
+        total_str_siz = strength + size
+        if total_str_siz <= 64:
+            damage_bonus = "-2d6"
+            build = -2
+        elif total_str_siz <= 84:
+            damage_bonus = "-1d6"
+            build = -1
+        elif total_str_siz <= 124:
+            damage_bonus = "0"
+            build = 0
+        elif total_str_siz <= 164:
+            damage_bonus = "+1d4"
+            build = 1
+        elif total_str_siz <= 204:
+            damage_bonus = "+1d6"
+            build = 2
+        else:
+            # 필요시 확장
+            damage_bonus = "+2d6"
+            build = 3
+
+        # 4) 상태(status) 계산
+        #    간단 예시: HP<1 → "빈사", SAN<=0 → "영구적 광기", 그 외 "정상"
+        if hp < 1:
+            status = "빈사"
+        elif sanity <= 0:
+            status = "영구적 광기"
+        else:
+            status = "정상"
+
+        # 5) DB 업데이트
+        cursor.execute("""
+            UPDATE users
+            SET movement = %s,
+                damage_bonus = %s,
+                build = %s,
+                status = %s
+            WHERE id = %s
+        """, (mov, damage_bonus, build, status, user_id))
+        conn.commit()
+
+        return True
+    except mysql.connector.Error as e:
+        print(f"❌ 보조 스탯 계산 실패: {e}")
+        return False
+    finally:
+        cursor.close()
+        conn.close()
+
+
+
+
+
+
+
 
 # ---------------------------------------
 # 3. 스탯 딕셔너리들
