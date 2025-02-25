@@ -332,7 +332,7 @@ class PersonalityPagesView(discord.ui.View):
         if hasattr(self, "select_menu"):
             self.remove_item(self.select_menu)
 
-        self.select_menu = PersonalitySelect(self)
+        self.select_menu = PersonalitySelect(self)  # 🔹 `view` 대신 `self` 전달
         self.add_item(self.select_menu)
 
         # 페이지 버튼 상태 업데이트
@@ -392,16 +392,16 @@ class PersonalityPagesView(discord.ui.View):
         )
 
 class PersonalitySelect(discord.ui.Select):
-    def __init__(self, view: PersonalityPagesView):
-        options = [discord.SelectOption(label=p["name"], value=p["name"]) for p in view.personality_list]
+    def __init__(self, parent_view: PersonalityPagesView):
+        options = [discord.SelectOption(label=p["name"], value=p["name"]) for p in parent_view.personality_list]
         super().__init__(placeholder="원하는 성격을 선택하세요!", min_values=1, max_values=4, options=options)
-        self.view = view  # 🔹 `PersonalityPagesView`를 참조하여 선택값 유지
+        self.parent_view = parent_view  # 🔹 `view` 대신 `parent_view`를 사용
 
     async def callback(self, interaction: discord.Interaction):
         """사용자가 성격을 선택하면 `PersonalityPagesView`에 저장"""
-        if len(self.view.selected_personalities) + len(self.values) > 4:
+        if len(self.parent_view.selected_personalities) + len(self.values) > 4:
             await interaction.response.send_message("❌ 최대 4개의 성격만 선택할 수 있습니다.", ephemeral=True)
             return
 
-        self.view.selected_personalities.update(self.values)  # 🔹 선택한 성격을 저장
-        await interaction.response.send_message(f"✅ 선택된 성격: `{', '.join(self.view.selected_personalities)}`", ephemeral=True)
+        self.parent_view.selected_personalities.update(self.values)  # 🔹 선택한 성격을 저장
+        await interaction.response.send_message(f"✅ 선택된 성격: `{', '.join(self.parent_view.selected_personalities)}`", ephemeral=True)
