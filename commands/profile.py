@@ -1,9 +1,16 @@
 import discord
 from discord import app_commands
-from database import get_user, update_user_name, update_user_size, update_user_house, update_user_appearance, update_user_personalities, register_user, get_house_data, get_personality_list, get_all_house_roles  # DB 함수 가져오기
+from database import register_user, get_user, get_house_data, get_personality_list, get_all_house_roles
+from database import update_user_name, update_user_size, update_user_appearance, update_user_house, update_user_personalities
+
+PAGE_SIZE = 7
 
 class ProfileCommands(discord.app_commands.Group):
     """프로필 관련 명령어 그룹"""
+
+    def __init__(self):
+        super().__init__(name="프로필", description="프로필 관련 명령어 그룹")
+        self.add_command(ProfileEditCommands(name="변경", description="프로필 정보를 변경하는 명령어 그룹"))
 
     @app_commands.command(name="등록", description="유저를 등록합니다.")
     async def register(self, interaction: discord.Interaction):
@@ -125,21 +132,72 @@ class ProfileCommands(discord.app_commands.Group):
 
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
-    @app_commands.command(name="이름변경", description="캐릭터 닉네임을 변경합니다.")
-    async def change_profile(self, interaction: discord.Interaction, new_name: str):
-        """유저 닉네임 정보를 변경하는 명령어"""
+    @app_commands.command(name="기숙사선택", description="기숙사를 선택합니다.")
+    async def select_house(self, interaction: discord.Interaction):
+        """기숙사 선택 버튼을 보여주는 명령어"""
         user_id = str(interaction.user.id)
         user_data = get_user(user_id)
 
-        if user_data:
-            update_user_name(user_id, new_name)
+        if not user_data:
+            await interaction.response.send_message("❌ 등록된 정보가 없습니다! `/프로필 등록`을 먼저 해주세요.", ephemeral=True)
+            return
+
+        view = HouseSelectionView(user_id)
+        await interaction.response.send_message("🏠 **기숙사를 선택하세요!**", view=view, ephemeral=True)
+
+    @app_commands.command(name="성격선택", description="성격을 선택합니다.")
+    async def select_personality(self, interaction: discord.Interaction):
+        """사용자가 성격을 선택할 수 있도록 페이지네이션을 제공하는 명령어"""
+        user_id = str(interaction.user.id)
+        user_data = get_user(user_id)
+
+        if not user_data:
+            await interaction.response.send_message(
+                "❌ 등록된 정보가 없습니다! `/프로필 등록`을 먼저 해주세요.", ephemeral=True
+            )
+            return
+
+        personality = user_data[3]  # (id, name, house, personality, ...)
+
+        if personality and personality != "":
+            await interaction.response.send_message(
+                "❌ 이미 성격을 선택하셨습니다. 다시 변경할 수 없습니다!", ephemeral=True
+            )
+            return
+
+        # 🔹 첫 번째 페이지의 데이터만 불러오도록 변경
+        view = PersonalityPagesView(user_id, page=0)
+
+        # 첫 페이지의 내용을 포함하여 응답 전송
+        await interaction.response.send_message(
+            content=f"**1 페이지**\n원하는 성격을 선택하세요! (최대 4개)",
+            view=view,
+            ephemeral=True
+        )
+   
+
+class ProfileEditCommands(app_commands.Group):
+    """프로필 변경 관련 명령어 그룹"""
+
+    @app_commands.command(name="이름", description="캐릭터 이름을 변경합니다.")
+    async def change_profile(self, interaction: discord.Interaction, new_name: str):
+        """캐릭터 이름 변경"""
+        user_id = str(interaction.user.id)
+        user_data = get_user(user_id)
+
+        if not user_data:
+            await interaction.response.send_message("❌ 등록된 정보가 없습니다! `/프로필 등록`을 먼저 해주세요.", ephemeral=True)
+            return
+
+        success = update_user_name(user_id, new_name)
+        if success:
             await interaction.response.send_message(f"✅ 이름이 `{new_name}`(으)로 변경되었습니다!", ephemeral=True)
         else:
-            await interaction.response.send_message("❌ 등록된 정보가 없습니다! `/프로필 등록`을 먼저 해주세요.", ephemeral=True)
+            await interaction.response.send_message("❌ 이름 변경에 실패했습니다.", ephemeral=True)
 
-    @app_commands.command(name="크기변경", description="캐릭터 크기(SIZ) 스탯을 변경합니다.")
+    @app_commands.command(name="크기", description="캐릭터 크기(SIZ) 스탯을 변경합니다.")
     async def change_size(self, interaction: discord.Interaction, new_size: int):
-        """유저가 직접 크기(SIZ)를 변경하는 명령어"""
+        """캐릭터 크기 변경"""
         user_id = str(interaction.user.id)
         user_data = get_user(user_id)
 
@@ -153,13 +211,13 @@ class ProfileCommands(discord.app_commands.Group):
 
         success = update_user_size(user_id, new_size)
         if success:
-            await interaction.response.send_message(f"📏 크기(SIZ)가 `{new_size}`(으)로 변경되었습니다!", ephemeral=True)
+            await interaction.response.send_message(f"✅ 크기(SIZ)가 `{new_size}`(으)로 변경되었습니다!", ephemeral=True)
         else:
             await interaction.response.send_message("❌ 크기(SIZ) 변경에 실패했습니다.", ephemeral=True)
 
-    @app_commands.command(name="외모변경", description="캐릭터 외모(APP) 스탯을 변경합니다.")
+    @app_commands.command(name="외모", description="캐릭터 외모(APP) 스탯을 변경합니다.")
     async def change_appearance(self, interaction: discord.Interaction, new_appearance: int):
-        """유저가 직접 외모(APP)를 변경하는 명령어"""
+        """캐릭터 외모 변경"""
         user_id = str(interaction.user.id)
         user_data = get_user(user_id)
 
@@ -177,43 +235,7 @@ class ProfileCommands(discord.app_commands.Group):
         else:
             await interaction.response.send_message("❌ 외모(APP) 변경에 실패했습니다.", ephemeral=True)
 
-    @app_commands.command(name="기숙사선택", description="기숙사를 선택합니다.")
-    async def select_house(self, interaction: discord.Interaction):
-        """기숙사 선택 버튼을 보여주는 명령어"""
-        user_id = str(interaction.user.id)
-        user_data = get_user(user_id)
 
-        if not user_data:
-            await interaction.response.send_message("❌ 등록된 정보가 없습니다! `/프로필 등록`을 먼저 해주세요.", ephemeral=True)
-            return
-
-        view = HouseSelectionView(user_id)
-        await interaction.response.send_message("🏠 **기숙사를 선택하세요!**", view=view, ephemeral=True)
-
-    @app_commands.command(name="성격선택", description="성격을 선택합니다.")
-    async def select_personality(self, interaction: discord.Interaction):
-        user_id = str(interaction.user.id)
-        user_data = get_user(user_id)
-        if not user_data:
-            await interaction.response.send_message("❌ 등록된 정보가 없습니다! `/프로필 등록`을 먼저 해주세요.", ephemeral=True)
-            return
-        
-        personality = user_data[3]  # (id, name, house, personality, ...라 가정)
-
-        # 이미 personality가 None이 아니거나 빈 문자열("")이 아니라면 “이미 성격 선택”
-        if personality is not None and personality != "":
-            await interaction.response.send_message("❌ 이미 성격을 선택하셨습니다. 다시 변경할 수 없습니다!", ephemeral=True)
-            return
-
-        # DB에서 personalities 목록을 가져온다 (29개 전부 or 일부)
-        # 여기서는 예시로 전부 가져온다고 가정
-        personalities = get_personality_list(limit=29)  
-        if not personalities:
-            await interaction.response.send_message("❌ 불러올 수 있는 성격 데이터가 없습니다.", ephemeral=True)
-            return
-
-        view = PersonalitySelectionView(user_id, personalities)
-        await interaction.response.send_message("**최대 4개의 성격을 선택하세요!**", view=view, ephemeral=True)
 
 
 class HouseSelectionView(discord.ui.View):
@@ -293,32 +315,83 @@ class HouseSelectionView(discord.ui.View):
         else:
             await interaction.response.send_message("❌ 기숙사 업데이트에 실패했습니다. 관리자에게 문의하세요.", ephemeral=True)
 
-class PersonalitySelectionView(discord.ui.View):
-    def __init__(self, user_id: str, personalities: list[dict]):
-        """
-        personalities: DB에서 가져온 성격 리스트 (예: [{ 'name': '대담한', ...}, ...])
-        """
+class PersonalityPagesView(discord.ui.View):
+    def __init__(self, user_id, page=0):
         super().__init__(timeout=60)
         self.user_id = user_id
+        self.page = page
+        self.load_page_data()  # 현재 페이지 데이터 불러오기
 
-        # Select Menu 생성
-        options = []
-        for p in personalities:
-            # SelectOption(label='대담한', description='...', value='대담한')
-            opt_label = p["name"]
-            opt_value = p["name"]  # value로도 동일한 이름
-            options.append(discord.SelectOption(label=opt_label, value=opt_value))
+    def load_page_data(self):
+        """현재 페이지 데이터를 DB에서 불러옴 (최적화된 방식)"""
+        self.personality_list = get_personality_list(page=self.page, page_size=PAGE_SIZE)
+        self.update_options()
 
-        self.select = PersonalitySelect(options, placeholder="최대 4개의 성격을 선택하세요!")
-        self.add_item(self.select)  # View에 Select 추가
+    def update_options(self):
+        """현재 페이지에 맞게 SelectMenu 옵션을 갱신"""
+        options = [discord.SelectOption(label=p["name"], value=p["name"]) for p in self.personality_list]
 
-    async def on_timeout(self):
-        # 타임아웃 시 select 비활성화
-        for child in self.children:
-            if isinstance(child, PersonalitySelect):
-                child.disabled = True
+        # 기존 SelectMenu 제거 후 새로 추가
+        if hasattr(self, "select_menu"):
+            self.remove_item(self.select_menu)
+
+        self.select_menu = PersonalitySelect(self.user_id, options)
+        self.add_item(self.select_menu)
+
+        # 페이지 버튼 상태 업데이트
+        self.prev_page.disabled = (self.page == 0)
+        self.next_page.disabled = (len(self.personality_list) < PAGE_SIZE)
+
+    @discord.ui.button(label="이전", style=discord.ButtonStyle.gray, disabled=True)
+    async def prev_page(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """이전 페이지 버튼"""
+        self.page -= 1
+        self.load_page_data()
+        await interaction.response.edit_message(
+            content=f"**{self.page + 1} 페이지**\n원하는 성격을 선택하세요! (최대 4개)",
+            view=self
+        )
+
+    @discord.ui.button(label="다음", style=discord.ButtonStyle.gray)
+    async def next_page(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """다음 페이지 버튼"""
+        self.page += 1
+        self.load_page_data()
+        await interaction.response.edit_message(
+            content=f"**{self.page + 1} 페이지**\n원하는 성격을 선택하세요! (최대 4개)",
+            view=self
+        )
 
 class PersonalitySelect(discord.ui.Select):
+    def __init__(self, user_id, options):
+        super().__init__(
+            placeholder="원하는 성격을 선택하세요!",
+            min_values=1,
+            max_values=4,
+            options=options
+        )
+        self.user_id = user_id
+
+    async def callback(self, interaction: discord.Interaction):
+        """사용자가 성격을 선택하면 DB에 저장"""
+        selected_personalities = self.values  # 최대 4개 선택 가능
+
+        # DB 반영
+        success = update_user_personalities(self.user_id, selected_personalities)
+        if success:
+            await interaction.response.send_message(
+                f"✅ 성격 `{', '.join(selected_personalities)}` 이(가) 적용되었습니다!",
+                ephemeral=True
+            )
+        else:
+            await interaction.response.send_message(
+                "❌ 성격 업데이트에 실패했습니다.",
+                ephemeral=True
+            )
+
+        # 선택 후 UI 비활성화
+        self.disabled = True
+        await interaction.message.edit(view=None)
     def __init__(self, options):
         super().__init__(
             placeholder="원하는 성격을 선택하세요!",
@@ -348,8 +421,3 @@ class PersonalitySelect(discord.ui.Select):
         # 선택 후 UI 비활성화
         self.disabled = True
         await interaction.message.edit(view=self.view)
-
-
-
-# 명령어 그룹 객체 생성
-profile_group = ProfileCommands(name="프로필", description="프로필 관련 명령어 그룹")

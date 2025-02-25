@@ -4,8 +4,8 @@ from dotenv import load_dotenv
 import os
 
 # 명령어 그룹 불러오기
-from commands.profile import profile_group
-from commands.gm_commands import gm_group
+from commands.profile import ProfileCommands
+from commands.gm_commands import GMCommands
 
 # 환경 변수 로드
 load_dotenv()
@@ -16,8 +16,8 @@ intents = discord.Intents.default()
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 # 명령어 그룹 등록
-bot.tree.add_command(profile_group)
-bot.tree.add_command(gm_group)
+bot.tree.add_command(ProfileCommands())
+bot.tree.add_command(GMCommands())
 
 # 봇 실행
 @bot.event

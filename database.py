@@ -290,13 +290,18 @@ def update_user_personalities(user_id: str, personality_list: list[str]) -> bool
         cursor.close()
         conn.close()
 
-def get_personality_list(limit=29):
+def get_personality_list(page=0, page_size=7):
     try:
         db_config = get_db_config()
         conn = mysql.connector.connect(**db_config)
         cursor = conn.cursor(dictionary=True)
 
-        cursor.execute("SELECT name, strength, constitution, intelligence, willpower, dexterity FROM personalities LIMIT %s", (limit,))
+        offset = page * page_size  # 페이지에 맞는 OFFSET 계산
+        cursor.execute(
+            "SELECT name, strength, constitution, intelligence, willpower, dexterity "
+            "FROM personalities ORDER BY id LIMIT %s OFFSET %s",
+            (page_size, offset)
+        )
         rows = cursor.fetchall()
         return rows
     except mysql.connector.Error as e:
