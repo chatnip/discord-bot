@@ -326,6 +326,7 @@ class PersonalityPagesView(discord.ui.View):
 
     def update_options(self):
         """현재 페이지에 맞게 SelectMenu 옵션을 갱신"""
+        self.personality_list = get_personality_list(page=self.page, page_size=7)
         options = [discord.SelectOption(label=p["name"], value=p["name"]) for p in self.personality_list]
 
         # 기존 SelectMenu 제거 후 새로 추가
@@ -337,7 +338,11 @@ class PersonalityPagesView(discord.ui.View):
 
         # 페이지 버튼 상태 업데이트
         self.prev_page.disabled = (self.page == 0)
-        self.next_page.disabled = (len(self.personality_list) < 7)
+        
+        # 🔹 마지막 페이지에서도 버튼이 보이도록 수정
+        total_personalities = 29  # 실제 DB에서 가져오는 개수 (수동 지정 가능)
+        last_page = (total_personalities - 1) // 7  # 마지막 페이지 번호 계산
+        self.next_page.disabled = (self.page >= last_page)  # 🔹 마지막 페이지까지만 활성화
 
         # 선택 완료 버튼 추가 (선택한 성격이 있을 때만 활성화)
         if hasattr(self, "confirm_button"):
@@ -345,6 +350,7 @@ class PersonalityPagesView(discord.ui.View):
         self.confirm_button = discord.ui.Button(label="선택 완료", style=discord.ButtonStyle.green)
         self.confirm_button.callback = self.confirm_selection
         self.add_item(self.confirm_button)
+
 
     async def confirm_selection(self, interaction: discord.Interaction):
         """선택한 성격을 최종적으로 저장"""
