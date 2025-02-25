@@ -316,6 +316,7 @@ class PersonalityPagesView(discord.ui.View):
         super().__init__(timeout=60)
         self.user_id = user_id
         self.page = page
+        self.selected_personalities = set()  # 🔹 선택한 성격을 저장하는 집합
         self.load_page_data()  # 현재 페이지 데이터 불러오기
 
     def load_page_data(self):
@@ -331,12 +332,44 @@ class PersonalityPagesView(discord.ui.View):
         if hasattr(self, "select_menu"):
             self.remove_item(self.select_menu)
 
-        self.select_menu = PersonalitySelect(options)
+        self.select_menu = PersonalitySelect(self)
         self.add_item(self.select_menu)
 
         # 페이지 버튼 상태 업데이트
         self.prev_page.disabled = (self.page == 0)
         self.next_page.disabled = (len(self.personality_list) < 7)
+
+        # 선택 완료 버튼 추가 (선택한 성격이 있을 때만 활성화)
+        if hasattr(self, "confirm_button"):
+            self.remove_item(self.confirm_button)
+        self.confirm_button = discord.ui.Button(label="선택 완료", style=discord.ButtonStyle.green)
+        self.confirm_button.callback = self.confirm_selection
+        self.add_item(self.confirm_button)
+
+    async def confirm_selection(self, interaction: discord.Interaction):
+        """선택한 성격을 최종적으로 저장"""
+        if not self.selected_personalities:
+            await interaction.response.send_message("❌ 최소 1개 이상의 성격을 선택해야 합니다.", ephemeral=True)
+            return
+
+        # DB 반영
+        success = update_user_personalities(self.user_id, list(self.selected_personalities))
+        if success:
+            await interaction.response.send_message(
+                f"✅ 성격 `{', '.join(self.selected_personalities)}` 이(가) 적용되었습니다!",
+                ephemeral=True
+            )
+        else:
+            await interaction.response.send_message("❌ 성격 업데이트에 실패했습니다.", ephemeral=True)
+
+        # 선택 후 UI 비활성화
+        self.disable_all()
+        await interaction.message.edit(view=self)
+
+    def disable_all(self):
+        """모든 UI 요소를 비활성화"""
+        for child in self.children:
+            child.disabled = True
 
     @discord.ui.button(label="이전", style=discord.ButtonStyle.gray, disabled=True)
     async def prev_page(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -359,32 +392,16 @@ class PersonalityPagesView(discord.ui.View):
         )
 
 class PersonalitySelect(discord.ui.Select):
-    def __init__(self, options):
-        super().__init__(
-            placeholder="원하는 성격을 선택하세요!",
-            min_values=1,
-            max_values=4,
-            options=options
-        )
+    def __init__(self, view: PersonalityPagesView):
+        options = [discord.SelectOption(label=p["name"], value=p["name"]) for p in view.personality_list]
+        super().__init__(placeholder="원하는 성격을 선택하세요!", min_values=1, max_values=4, options=options)
+        self.view = view  # 🔹 `PersonalityPagesView`를 참조하여 선택값 유지
 
     async def callback(self, interaction: discord.Interaction):
-        """사용자가 성격을 선택하면 DB에 저장"""
-        selected_personalities = self.values  # 최대 4개 선택 가능
-        user_id = interaction.user.id
+        """사용자가 성격을 선택하면 `PersonalityPagesView`에 저장"""
+        if len(self.view.selected_personalities) + len(self.values) > 4:
+            await interaction.response.send_message("❌ 최대 4개의 성격만 선택할 수 있습니다.", ephemeral=True)
+            return
 
-        # DB 반영
-        success = update_user_personalities(user_id, selected_personalities)
-        if success:
-            await interaction.response.send_message(
-                f"✅ 성격 `{', '.join(selected_personalities)}` 이(가) 적용되었습니다!",
-                ephemeral=True
-            )
-        else:
-            await interaction.response.send_message(
-                "❌ 성격 업데이트에 실패했습니다.",
-                ephemeral=True
-            )
-
-        # 선택 후 UI 비활성화
-        self.disabled = True
-        await interaction.message.edit(view=None)
+        self.view.selected_personalities.update(self.values)  # 🔹 선택한 성격을 저장
+        await interaction.response.send_message(f"✅ 선택된 성격: `{', '.join(self.view.selected_personalities)}`", ephemeral=True)
