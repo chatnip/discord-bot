@@ -398,10 +398,19 @@ class PersonalitySelect(discord.ui.Select):
         self.parent_view = parent_view  # 🔹 `view` 대신 `parent_view`를 사용
 
     async def callback(self, interaction: discord.Interaction):
-        """사용자가 성격을 선택하면 `PersonalityPagesView`에 저장"""
-        if len(self.parent_view.selected_personalities) + len(self.values) > 4:
-            await interaction.response.send_message("❌ 최대 4개의 성격만 선택할 수 있습니다.", ephemeral=True)
-            return
+        """사용자가 성격을 선택하면 `PersonalityPagesView`에 저장 또는 삭제"""
+        selected_values = set(self.values)  # 사용자가 선택한 값 (set 사용)
+        
+        # 선택 해제 로직 추가 (이미 선택된 성격이면 제거)
+        for personality in selected_values:
+            if personality in self.parent_view.selected_personalities:
+                self.parent_view.selected_personalities.remove(personality)  # 🔹 기존 선택값 삭제
+            else:
+                if len(self.parent_view.selected_personalities) >= 4:
+                    await interaction.response.send_message("❌ 최대 4개의 성격만 선택할 수 있습니다.", ephemeral=True)
+                    return
+                self.parent_view.selected_personalities.add(personality)  # 🔹 새 선택값 추가
 
-        self.parent_view.selected_personalities.update(self.values)  # 🔹 선택한 성격을 저장
-        await interaction.response.send_message(f"✅ 선택된 성격: `{', '.join(self.parent_view.selected_personalities)}`", ephemeral=True)
+        # UI 업데이트
+        selected_list = ", ".join(self.parent_view.selected_personalities) if self.parent_view.selected_personalities else "없음"
+        await interaction.response.send_message(f"✅ 현재 선택된 성격: `{selected_list}`", ephemeral=True)
