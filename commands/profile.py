@@ -3,8 +3,6 @@ from discord import app_commands
 from database import register_user, get_user, get_house_data, get_personality_list, get_all_house_roles
 from database import update_user_name, update_user_size, update_user_appearance, update_user_house, update_user_personalities
 
-PAGE_SIZE = 7
-
 class ProfileCommands(discord.app_commands.Group):
     """프로필 관련 명령어 그룹"""
 
@@ -324,7 +322,7 @@ class PersonalityPagesView(discord.ui.View):
 
     def load_page_data(self):
         """현재 페이지 데이터를 DB에서 불러옴 (최적화된 방식)"""
-        self.personality_list = get_personality_list(page=self.page, page_size=PAGE_SIZE)
+        self.personality_list = get_personality_list(page=self.page, page_size=7)
         self.update_options()
 
     def update_options(self):
@@ -335,12 +333,12 @@ class PersonalityPagesView(discord.ui.View):
         if hasattr(self, "select_menu"):
             self.remove_item(self.select_menu)
 
-        self.select_menu = PersonalitySelect(self.user_id, options)
+        self.select_menu = PersonalitySelect(options)
         self.add_item(self.select_menu)
 
         # 페이지 버튼 상태 업데이트
         self.prev_page.disabled = (self.page == 0)
-        self.next_page.disabled = (len(self.personality_list) < PAGE_SIZE)
+        self.next_page.disabled = (len(self.personality_list) < 7)
 
     @discord.ui.button(label="이전", style=discord.ButtonStyle.gray, disabled=True)
     async def prev_page(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -363,21 +361,21 @@ class PersonalityPagesView(discord.ui.View):
         )
 
 class PersonalitySelect(discord.ui.Select):
-    def __init__(self, user_id, options):
+    def __init__(self, options):
         super().__init__(
             placeholder="원하는 성격을 선택하세요!",
             min_values=1,
             max_values=4,
             options=options
         )
-        self.user_id = user_id
 
     async def callback(self, interaction: discord.Interaction):
         """사용자가 성격을 선택하면 DB에 저장"""
         selected_personalities = self.values  # 최대 4개 선택 가능
+        user_id = interaction.user.id
 
         # DB 반영
-        success = update_user_personalities(self.user_id, selected_personalities)
+        success = update_user_personalities(user_id, selected_personalities)
         if success:
             await interaction.response.send_message(
                 f"✅ 성격 `{', '.join(selected_personalities)}` 이(가) 적용되었습니다!",
@@ -392,32 +390,3 @@ class PersonalitySelect(discord.ui.Select):
         # 선택 후 UI 비활성화
         self.disabled = True
         await interaction.message.edit(view=None)
-    def __init__(self, options):
-        super().__init__(
-            placeholder="원하는 성격을 선택하세요!",
-            min_values=1,
-            max_values=4,
-            options=options
-        )
-
-    async def callback(self, interaction: discord.Interaction):
-        # 사용자가 선택한 값들(self.values)은 list[str]
-        selected_personalities = self.values  # 최대 4개
-        user_id = self.view.user_id
-
-        # DB 반영
-        success = update_user_personalities(user_id, selected_personalities)
-        if success:
-            await interaction.response.send_message(
-                f"성격 `{', '.join(selected_personalities)}` 이(가) 적용되었습니다!",
-                ephemeral=True
-            )
-        else:
-            await interaction.response.send_message(
-                "❌ 성격 업데이트에 실패했습니다.",
-                ephemeral=True
-            )
-
-        # 선택 후 UI 비활성화
-        self.disabled = True
-        await interaction.message.edit(view=self.view)
