@@ -234,8 +234,6 @@ class ProfileEditCommands(app_commands.Group):
             await interaction.response.send_message("❌ 외모(APP) 변경에 실패했습니다.", ephemeral=True)
 
 
-
-
 class HouseSelectionView(discord.ui.View):
     def __init__(self, user_id):
         super().__init__(timeout=60)  # 60초 후 버튼 비활성화
