@@ -97,7 +97,7 @@ class ProfileCommands(discord.app_commands.Group):
 
         stats_lines = []
         for (label1, val1), (label2, val2) in zip(stats_left, stats_right):
-            line = f"{label1:<9}: {val1:<4}  {label2:<9}: {val2}"
+            line = f"{label1:<9}: {val1:<6}  {label2:<9}: {val2}"
             stats_lines.append(line)
 
         stats_block = "```" + "\n".join(stats_lines) + "```"
@@ -118,7 +118,7 @@ class ProfileCommands(discord.app_commands.Group):
         ]
         combat_lines = []
         for (label1, val1), (label2, val2) in zip(combat_left, combat_right):
-            line = f"{label1:<9}: {val1:<4} {label2:<9}: {val2}"
+            line = f"{label1:<9}: {val1:<6} {label2:<9}: {val2}"
             combat_lines.append(line)
 
         combat_block = "```" + "\n".join(combat_lines) + "```"
@@ -327,7 +327,6 @@ class PersonalityPagesView(discord.ui.View):
     def update_options(self):
         """현재 페이지에 맞게 SelectMenu 옵션을 갱신"""
         self.personality_list = get_personality_list(page=self.page, page_size=7)
-        options = [discord.SelectOption(label=p["name"], value=p["name"]) for p in self.personality_list]
 
         # 기존 SelectMenu 제거 후 새로 추가
         if hasattr(self, "select_menu"):
@@ -340,7 +339,7 @@ class PersonalityPagesView(discord.ui.View):
         self.prev_page.disabled = (self.page == 0)
         
         # 🔹 마지막 페이지에서도 버튼이 보이도록 수정
-        total_personalities = 29  # 실제 DB에서 가져오는 개수 (수동 지정 가능)
+        total_personalities = 28  # 실제 DB에서 가져오는 개수 (수동 지정 가능)
         last_page = (total_personalities - 1) // 7  # 마지막 페이지 번호 계산
         self.next_page.disabled = (self.page >= last_page)  # 🔹 마지막 페이지까지만 활성화
 

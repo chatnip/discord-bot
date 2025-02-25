@@ -37,7 +37,7 @@ def get_db_config():
 #         ''')
 
 #         conn.commit()
-#         print("✅ 문자열 길이 늘이기기 완료!")
+#         print("✅ 문자열 길이 늘이기 완료!")
 
 #     except mysql.connector.Error as e:
 #         print(f"❌ SQL 실행 실패: {e}")
