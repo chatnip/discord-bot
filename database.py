@@ -66,7 +66,7 @@ def get_user(user_id):
         conn = mysql.connector.connect(**db_config)
         cursor = conn.cursor()
 
-        cursor.execute("SELECT * FROM users WHERE id = %s", (user_id,))
+        cursor.execute("SELECT * FROM users WHERE user_id = %s", (user_id,))
         result = cursor.fetchone()
         return result  # 유저가 없다면 None 반환
     except mysql.connector.Error as e:
@@ -90,7 +90,7 @@ def register_user(user_id, user_name):
         base_strength = base_constitution = base_size = base_dexterity = base_willpower = base_appearance = base_education = 50
 
         cursor.execute(
-            "INSERT INTO users (id, name, house, personality,strength, constitution, size, dexterity, willpower, appearance, education, luck, hp, mp, sanity, status)"
+            "INSERT INTO users (user_id, name, house, personality,strength, constitution, size, dexterity, willpower, appearance, education, luck, hp, mp, sanity, status)"
             "VALUES (%s, %s, NULL, NULL, %s, %s, %s, %s, %s, %s, %s, %s, 0, 0, 0, 'N')",
             (user_id, user_name, base_strength, base_constitution, base_size, base_dexterity, base_willpower, base_appearance, base_education, luck_value)
         )
@@ -139,7 +139,7 @@ def update_user_name(user_id, new_name):
         conn = mysql.connector.connect(**db_config)
         cursor = conn.cursor()
 
-        cursor.execute("UPDATE users SET name = %s WHERE id = %s", (new_name, user_id))
+        cursor.execute("UPDATE users SET name = %s WHERE user_id = %s", (new_name, user_id))
         conn.commit()
     except mysql.connector.Error as e:
         print(f"❌ 이름 변경 실패: {e}")
@@ -154,7 +154,7 @@ def update_user_size(user_id, new_size):
         conn = mysql.connector.connect(**db_config)
         cursor = conn.cursor()
 
-        cursor.execute("UPDATE users SET size = %s WHERE id = %s", (new_size, user_id))
+        cursor.execute("UPDATE users SET size = %s WHERE user_id = %s", (new_size, user_id))
         conn.commit()
 
         updated = (cursor.rowcount > 0)
@@ -176,7 +176,7 @@ def update_user_appearance(user_id, new_appearance):
         conn = mysql.connector.connect(**db_config)
         cursor = conn.cursor()
 
-        cursor.execute("UPDATE users SET appearance = %s WHERE id = %s", (new_appearance, user_id))
+        cursor.execute("UPDATE users SET appearance = %s WHERE user_id = %s", (new_appearance, user_id))
         conn.commit()
         return cursor.rowcount > 0  # 업데이트 성공 여부 반환
     except mysql.connector.Error as e:
@@ -215,7 +215,7 @@ def update_user_house(user_id, house_name):
                 intelligence  = COALESCE(intelligence, 0) + %s,
                 willpower     = COALESCE(willpower, 0) + %s,
                 dexterity     = COALESCE(dexterity, 0) + %s
-            WHERE id = %s
+            WHERE user_id = %s
         """, (
             house_name,
             strength_boost,
@@ -289,7 +289,7 @@ def update_user_personalities(user_id: str, personality_list: list[str]) -> bool
                 intelligence = COALESCE(intelligence, 0) + %s,
                 willpower    = COALESCE(willpower, 0) + %s,
                 dexterity    = COALESCE(dexterity, 0) + %s
-            WHERE id = %s
+            WHERE user_id = %s
         """
 
         cursor.execute(update_query, (
@@ -345,7 +345,7 @@ def add_money(user_id, amount):
         conn = mysql.connector.connect(**db_config)
         cursor = conn.cursor()
 
-        cursor.execute("UPDATE users SET money = money + %s WHERE id = %s", (amount, user_id))
+        cursor.execute("UPDATE users SET money = money + %s WHERE user_id = %s", (amount, user_id))
         conn.commit()
         return cursor.rowcount > 0  # 업데이트 성공 여부 반환
     except mysql.connector.Error as e:
@@ -362,7 +362,7 @@ def remove_money(user_id, amount):
         conn = mysql.connector.connect(**db_config)
         cursor = conn.cursor()
 
-        cursor.execute("UPDATE users SET money = GREATEST(money - %s, 0) WHERE id = %s", (amount, user_id))
+        cursor.execute("UPDATE users SET money = GREATEST(money - %s, 0) WHERE user_id = %s", (amount, user_id))
         conn.commit()
         return cursor.rowcount > 0  # 업데이트 성공 여부 반환
     except mysql.connector.Error as e:
@@ -379,7 +379,7 @@ def delete_user(user_id):
         conn = mysql.connector.connect(**db_config)
         cursor = conn.cursor()
 
-        cursor.execute("DELETE FROM users WHERE id = %s", (user_id,))
+        cursor.execute("DELETE FROM users WHERE user_id = %s", (user_id,))
         conn.commit()
 
         return cursor.rowcount > 0  # 삭제된 row가 있으면 True 반환
@@ -405,7 +405,7 @@ def calculate_derived_stats(user_id):
         cursor = conn.cursor(dictionary=True)
 
         # 1) 현재 캐릭터 정보 가져오기
-        cursor.execute("SELECT strength, constitution, size, dexterity, willpower, hp, mp, sanity FROM users WHERE id = %s", (user_id,))
+        cursor.execute("SELECT strength, constitution, size, dexterity, willpower, hp, mp, sanity FROM users WHERE user_id = %s", (user_id,))
         row = cursor.fetchone()
         if not row:
             return False  # 없는 유저
@@ -472,7 +472,7 @@ def calculate_derived_stats(user_id):
                 damage_bonus = %s,
                 build = %s,
                 status = %s
-            WHERE id = %s
+            WHERE user_id = %s
         """, (hp, mp, san, mov, damage_bonus, build, status, user_id))
         conn.commit()
 
