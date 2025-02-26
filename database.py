@@ -31,35 +31,19 @@ try:
     conn = mysql.connector.connect(**db_config)
     cursor = conn.cursor()
 
-    # 1️⃣ users 테이블의 id를 user_id로 변경
+    # 1️⃣ 기존 PRIMARY KEY 제거 (user_id에서)
     try:
-        cursor.execute("ALTER TABLE users CHANGE COLUMN id user_id VARCHAR(50)")
-        print("✅ users 테이블의 id를 user_id로 변경 완료!")
+        cursor.execute("ALTER TABLE users DROP PRIMARY KEY")
+        print("✅ 기존 PRIMARY KEY 제거 완료!")
     except mysql.connector.Error as e:
-        print(f"❌ id 변경 실패: {e}")
+        print(f"❌ PRIMARY KEY 제거 실패: {e}")
 
-    # 2️⃣ 새로운 id 컬럼 추가 (AUTO_INCREMENT PRIMARY KEY)
+    # 3️⃣ 새로운 id 컬럼 추가 (AUTO_INCREMENT PRIMARY KEY)
     try:
         cursor.execute("ALTER TABLE users ADD COLUMN id INT AUTO_INCREMENT PRIMARY KEY FIRST")
         print("✅ 새로운 id 컬럼 추가 완료!")
     except mysql.connector.Error as e:
         print(f"❌ id 컬럼 추가 실패: {e}")
-
-    # 3️⃣ investigator 테이블 생성
-    try:
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS investigator (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                user_id VARCHAR(50),
-                name VARCHAR(50),
-                basic_point INT DEFAULT 0,
-                add_point INT DEFAULT 0,
-                FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
-            )
-        ''')
-        print("✅ investigator 테이블 생성 완료!")
-    except mysql.connector.Error as e:
-        print(f"❌ investigator 테이블 생성 실패: {e}")
 
     conn.commit()
 
