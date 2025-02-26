@@ -26,34 +26,34 @@ def get_db_config():
 # ---------------------------------------
 # 1. 초기 테이블 생성 파트
 # ---------------------------------------
-try:
-    db_config = get_db_config()
-    conn = mysql.connector.connect(**db_config)
-    cursor = conn.cursor()
+# try:
+#     db_config = get_db_config()
+#     conn = mysql.connector.connect(**db_config)
+#     cursor = conn.cursor()
 
-    # 5️⃣ user_id에 UNIQUE 제약 추가 (FK 가능하게)
-    try:
-        cursor.execute("ALTER TABLE users ADD UNIQUE(user_id)")
-        print("✅ user_id에 UNIQUE 제약 추가 완료!")
-    except mysql.connector.Error as e:
-        print(f"❌ user_id UNIQUE 추가 실패: {e}")
+#     # 5️⃣ user_id에 UNIQUE 제약 추가 (FK 가능하게)
+#     try:
+#         cursor.execute("ALTER TABLE users ADD UNIQUE(user_id)")
+#         print("✅ user_id에 UNIQUE 제약 추가 완료!")
+#     except mysql.connector.Error as e:
+#         print(f"❌ user_id UNIQUE 추가 실패: {e}")
 
-    # 6️⃣ investigator 테이블에 FK 다시 추가
-    try:
-        cursor.execute("ALTER TABLE investigator ADD CONSTRAINT fk_investigator_user FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE")
-        print("✅ investigator 테이블에 FK 다시 추가 완료!")
-    except mysql.connector.Error as e:
-        print(f"❌ investigator FK 추가 실패: {e}")
+#     # 6️⃣ investigator 테이블에 FK 다시 추가
+#     try:
+#         cursor.execute("ALTER TABLE investigator ADD CONSTRAINT fk_investigator_user FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE")
+#         print("✅ investigator 테이블에 FK 다시 추가 완료!")
+#     except mysql.connector.Error as e:
+#         print(f"❌ investigator FK 추가 실패: {e}")
 
-    conn.commit()
+#     conn.commit()
 
-except Exception as e:
-    print(f"❌ MySQL 오류 발생: {e}")
+# except Exception as e:
+#     print(f"❌ MySQL 오류 발생: {e}")
 
-finally:
-    cursor.close()
-    conn.close()
-    print("🔌 MySQL 연결 종료")
+# finally:
+#     cursor.close()
+#     conn.close()
+#     print("🔌 MySQL 연결 종료")
 
 
 # ---------------------------------------
@@ -94,6 +94,28 @@ def register_user(user_id, user_name):
             "VALUES (%s, %s, NULL, NULL, %s, %s, %s, %s, %s, %s, %s, %s, 0, 0, 0, 'N')",
             (user_id, user_name, base_strength, base_constitution, base_size, base_dexterity, base_willpower, base_appearance, base_education, luck_value)
         )
+
+        if cursor.rowcount > 0:
+            print(f"✅ 유저 등록 완료: {user_id} - {user_name}")
+
+            default_skills = {
+                "감정": 5, "고고학": 1, "관찰력": 25, "근접전(격투)": 25, "기계수리": 10,
+                "도약": 20, "듣기": 20, "말재주": 5, "매혹": 15, "법률": 5,
+                "변장": 5, "사격(권총)": 20, "사격(라/산)": 25, "설득": 10, "손놀림":10,
+                "수영": 20, "승마": 5, "심리학": 10, "언어(모국어)": base_education, "역사": 5,
+                "열쇠공": 1, "오르기": 20, "오컬트": 5, "위협": 15, "은밀행동": 20,
+                "응급처치": 30, "의료": 1, "인류학": 1, "자동차 운전": 20, "자료조사": 20,
+                "자연": 10, "전기수리": 10, "정신분석": 1, "중장비 조작": 1, "추적": 10,
+                "크툴루 신화": 0, "투척": 20, "항법": 10, "회계": 5, "회피": base_dexterity // 2
+            }
+
+            for skill_name, basic_point in default_skills.items():
+                cursor.execute(
+                    "INSERT INTO investigator (user_id, name, basic_point, add_point) VALUES (%s, %s, %s, 0)",
+                    (user_id, skill_name, basic_point)
+                )
+
+            print(f"✅ {user_name}의 기본 기능치 추가 완료!")
         conn.commit()
 
         updated = (cursor.rowcount > 0)
