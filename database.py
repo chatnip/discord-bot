@@ -66,7 +66,12 @@ def get_user(user_id):
         conn = mysql.connector.connect(**db_config)
         cursor = conn.cursor()
 
-        cursor.execute("SELECT * FROM users WHERE user_id = %s", (user_id,))
+        cursor.execute("""
+            SELECT user_id, name, house, personality, strength, constitution, size, intelligence, 
+                   willpower, dexterity, appearance, education, money, luck, movement, damage_bonus, 
+                   build, hp, mp, sanity, status 
+            FROM users WHERE user_id = %s
+        """, (user_id,))
         result = cursor.fetchone()
         return result  # 유저가 없다면 None 반환
     except mysql.connector.Error as e:
