@@ -26,29 +26,50 @@ def get_db_config():
 # ---------------------------------------
 # 1. 초기 테이블 생성 파트
 # ---------------------------------------
-# try:
-#     db_config = get_db_config()
-#     conn = mysql.connector.connect(**db_config)
-#     cursor = conn.cursor()
+try:
+    db_config = get_db_config()
+    conn = mysql.connector.connect(**db_config)
+    cursor = conn.cursor()
 
-#     try:
-#         cursor.execute('''
-#             ALTER TABLE users MODIFY COLUMN personality VARCHAR(255) DEFAULT NULL
-#         ''')
+    # 1️⃣ users 테이블의 id를 user_id로 변경
+    try:
+        cursor.execute("ALTER TABLE users CHANGE COLUMN id user_id VARCHAR(50)")
+        print("✅ users 테이블의 id를 user_id로 변경 완료!")
+    except mysql.connector.Error as e:
+        print(f"❌ id 변경 실패: {e}")
 
-#         conn.commit()
-#         print("✅ 문자열 길이 늘이기 완료!")
+    # 2️⃣ 새로운 id 컬럼 추가 (AUTO_INCREMENT PRIMARY KEY)
+    try:
+        cursor.execute("ALTER TABLE users ADD COLUMN id INT AUTO_INCREMENT PRIMARY KEY FIRST")
+        print("✅ 새로운 id 컬럼 추가 완료!")
+    except mysql.connector.Error as e:
+        print(f"❌ id 컬럼 추가 실패: {e}")
 
-#     except mysql.connector.Error as e:
-#         print(f"❌ SQL 실행 실패: {e}")
+    # 3️⃣ investigator 테이블 생성
+    try:
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS investigator (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id VARCHAR(50),
+                name VARCHAR(50),
+                basic_point INT DEFAULT 0,
+                add_point INT DEFAULT 0,
+                FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+            )
+        ''')
+        print("✅ investigator 테이블 생성 완료!")
+    except mysql.connector.Error as e:
+        print(f"❌ investigator 테이블 생성 실패: {e}")
 
-# except Exception as e:
-#     print(f"❌ MySQL 오류 발생: {e}")
+    conn.commit()
 
-# finally:
-#     cursor.close()
-#     conn.close()
-#     print("🔌 MySQL 연결 종료")
+except Exception as e:
+    print(f"❌ MySQL 오류 발생: {e}")
+
+finally:
+    cursor.close()
+    conn.close()
+    print("🔌 MySQL 연결 종료")
 
 
 # ---------------------------------------
@@ -86,7 +107,7 @@ def register_user(user_id, user_name):
 
         cursor.execute(
             "INSERT INTO users (id, name, house, personality,strength, constitution, size, dexterity, willpower, appearance, education, luck, hp, mp, sanity, status)"
-            "VALUES (%s, %s, NULL, NULL, %s, %s, %s, %s, %s, %s, %s, %s, 0, 0, 0, '정상')",
+            "VALUES (%s, %s, NULL, NULL, %s, %s, %s, %s, %s, %s, %s, %s, 0, 0, 0, 'N')",
             (user_id, user_name, base_strength, base_constitution, base_size, base_dexterity, base_willpower, base_appearance, base_education, luck_value)
         )
         conn.commit()
@@ -429,11 +450,11 @@ def calculate_derived_stats(user_id):
         # HP<1 => 빈사, SAN<=0 => 영구적 광기, 아니면 정상
         # (여기서는 새로 계산된 hp, san을 기준으로 판단)
         if hp < 1:
-            status = "빈사"
+            status = "D"
         elif san <= 0:
-            status = "영구적 광기"
+            status = "M"
         else:
-            status = "정상"
+            status = "N"
 
         # 6) DB 업데이트
         cursor.execute("""

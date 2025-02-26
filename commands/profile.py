@@ -30,34 +30,10 @@ class ProfileCommands(discord.app_commands.Group):
         user_data = get_user(user_id)
 
         if not user_data:
-            await interaction.response.send_message(
-                "❌ 등록된 정보가 없습니다! `/프로필 등록`을 먼저 해주세요.",
-                ephemeral=True
-            )
+            await interaction.response.send_message("❌ 등록된 정보가 없습니다! `/프로필 등록`을 먼저 해주세요.", ephemeral=True)
             return
 
-        (
-            user_name,
-            house,
-            personality,
-            strength,
-            constitution,
-            size,
-            intelligence,
-            willpower,
-            dexterity,
-            appearance,
-            education,
-            money,
-            luck,
-            movement,
-            damage_bonus,
-            build,
-            hp,
-            mp,
-            sanity,
-            status
-        ) = user_data[1:]
+        (user_name, house, personality, strength, constitution, size, intelligence, willpower, dexterity, appearance, education, money, luck, movement, damage_bonus, build, hp, mp, sanity, status) = user_data[1:]
 
         # 재화 환산
         galleons = money // 493
