@@ -31,28 +31,14 @@ try:
     conn = mysql.connector.connect(**db_config)
     cursor = conn.cursor()
 
-    # 1️⃣ investigator 테이블의 FK 제거
+    # 5️⃣ user_id에 UNIQUE 제약 추가 (FK 가능하게)
     try:
-        cursor.execute("ALTER TABLE investigator DROP FOREIGN KEY investigator_ibfk_1")  # FK 이름이 다를 수도 있음!
-        print("✅ investigator 테이블의 외래 키 제거 완료!")
+        cursor.execute("ALTER TABLE users ADD UNIQUE(user_id)")
+        print("✅ user_id에 UNIQUE 제약 추가 완료!")
     except mysql.connector.Error as e:
-        print(f"❌ investigator FK 제거 실패: {e}")
+        print(f"❌ user_id UNIQUE 추가 실패: {e}")
 
-    # 2️⃣ 기존 PRIMARY KEY 제거 (user_id에서)
-    try:
-        cursor.execute("ALTER TABLE users DROP PRIMARY KEY")
-        print("✅ 기존 PRIMARY KEY 제거 완료!")
-    except mysql.connector.Error as e:
-        print(f"❌ PRIMARY KEY 제거 실패: {e}")
-
-    # 4️⃣ 새로운 id 컬럼 추가 (AUTO_INCREMENT PRIMARY KEY)
-    try:
-        cursor.execute("ALTER TABLE users ADD COLUMN id INT AUTO_INCREMENT PRIMARY KEY FIRST")
-        print("✅ 새로운 id 컬럼 추가 완료!")
-    except mysql.connector.Error as e:
-        print(f"❌ id 컬럼 추가 실패: {e}")
-
-    # 5️⃣ investigator 테이블에 FK 다시 추가
+    # 6️⃣ investigator 테이블에 FK 다시 추가
     try:
         cursor.execute("ALTER TABLE investigator ADD CONSTRAINT fk_investigator_user FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE")
         print("✅ investigator 테이블에 FK 다시 추가 완료!")
