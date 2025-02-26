@@ -26,34 +26,26 @@ def get_db_config():
 # ---------------------------------------
 # 1. 초기 테이블 생성 파트
 # ---------------------------------------
-# try:
-#     db_config = get_db_config()
-#     conn = mysql.connector.connect(**db_config)
-#     cursor = conn.cursor()
+try:
+    db_config = get_db_config()
+    conn = mysql.connector.connect(**db_config)
+    cursor = conn.cursor()
 
-#     # 5️⃣ user_id에 UNIQUE 제약 추가 (FK 가능하게)
-#     try:
-#         cursor.execute("ALTER TABLE users ADD UNIQUE(user_id)")
-#         print("✅ user_id에 UNIQUE 제약 추가 완료!")
-#     except mysql.connector.Error as e:
-#         print(f"❌ user_id UNIQUE 추가 실패: {e}")
+    try:
+        cursor.execute("ALTER TABLE users ADD COLUMN skill_point INT DEFAULT 0")
+        print("✅ 완료!")
+    except mysql.connector.Error as e:
+        print(f"❌ 실패: {e}")
 
-#     # 6️⃣ investigator 테이블에 FK 다시 추가
-#     try:
-#         cursor.execute("ALTER TABLE investigator ADD CONSTRAINT fk_investigator_user FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE")
-#         print("✅ investigator 테이블에 FK 다시 추가 완료!")
-#     except mysql.connector.Error as e:
-#         print(f"❌ investigator FK 추가 실패: {e}")
+    conn.commit()
 
-#     conn.commit()
+except Exception as e:
+    print(f"❌ MySQL 오류 발생: {e}")
 
-# except Exception as e:
-#     print(f"❌ MySQL 오류 발생: {e}")
-
-# finally:
-#     cursor.close()
-#     conn.close()
-#     print("🔌 MySQL 연결 종료")
+finally:
+    cursor.close()
+    conn.close()
+    print("🔌 MySQL 연결 종료")
 
 
 # ---------------------------------------
@@ -126,7 +118,7 @@ def register_user(user_id, user_name):
         updated = (cursor.rowcount > 0)
         if updated:
             print(f"✅ 유저 등록 완료: {user_id} - {user_name}")
-            calculate_derived_stats(user_id)
+            update_user_state(user_id)
         return updated
     
     except mysql.connector.Error as e:
@@ -164,7 +156,7 @@ def update_user_size(user_id, new_size):
 
         updated = (cursor.rowcount > 0)
         if updated:
-            calculate_derived_stats(user_id)
+            update_user_state(user_id)
         return updated
 
     except mysql.connector.Error as e:
@@ -183,7 +175,7 @@ def update_user_appearance(user_id, new_appearance):
 
         cursor.execute("UPDATE users SET appearance = %s WHERE user_id = %s", (new_appearance, user_id))
         conn.commit()
-        return cursor.rowcount > 0  # 업데이트 성공 여부 반환
+        return cursor.rowcount > 0
     except mysql.connector.Error as e:
         print(f"❌ 외모(appearance) 변경 실패: {e}")
         return False
@@ -192,12 +184,11 @@ def update_user_appearance(user_id, new_appearance):
         conn.close()
 
 def update_user_house(user_id, house_name):
-    """유저가 기숙사를 선택하면 해당 기숙사의 능력치를 반영"""
+    """유저 기숙사 적용"""
     house_data = get_house_data(house_name)
     if not house_data:
-        return False  # 존재하지 않는 기숙사
+        return False
 
-    # 2) 보정치 추출
     strength_boost      = house_data["strength"]
     constitution_boost  = house_data["constitution"]
     size_boost          = house_data["size"]
@@ -210,7 +201,6 @@ def update_user_house(user_id, house_name):
         conn = mysql.connector.connect(**db_config)
         cursor = conn.cursor()
 
-        # 3) 유저 테이블 업데이트
         cursor.execute("""
             UPDATE users
             SET house = %s,
@@ -235,7 +225,7 @@ def update_user_house(user_id, house_name):
 
         updated = (cursor.rowcount > 0)
         if updated:
-            calculate_derived_stats(user_id)
+            update_user_state(user_id)
         return updated
     
     except mysql.connector.Error as e:
@@ -247,32 +237,24 @@ def update_user_house(user_id, house_name):
 
 def update_user_personalities(user_id: str, personality_list: list[str]) -> bool:
     """
-    유저에게 복수의 성격을 적용:
-    1) personalities 테이블에서 personality_list 각 항목에 해당하는 보정치 조회
-    2) 모두 합산하여 users 테이블에 반영
-    3) user의 personality 컬럼에는 '성격1,성격2,성격3,성격4' 식으로 저장
+    유저 성격 적용
     """
     if not personality_list:
-        return False  # 빈 리스트면 처리 안 함
+        return False
 
-    # 1) DB 연결
     try:
         db_config = get_db_config()
         conn = mysql.connector.connect(**db_config)
         cursor = conn.cursor(dictionary=True)
 
-        # 2) 성격 데이터 전부 로드해서 합산
-        # ex) SELECT * FROM personalities WHERE name IN ('대담한','신중한','...')
-        in_clause = ",".join(["%s"] * len(personality_list))  # (%s,%s,%s,%s)
+        in_clause = ",".join(["%s"] * len(personality_list))
         query = f"SELECT * FROM personalities WHERE name IN ({in_clause})"
         cursor.execute(query, tuple(personality_list))
         rows = cursor.fetchall()  # [{}, {}, ...]
 
-        # 실제로 존재하지 않는 이름이 있으면 rows 갯수가 줄어들 수 있음
         if not rows:
             return False
 
-        # 보정치 합계
         total_str = total_con = total_int = total_pow = total_dex = 0
         for row in rows:
             total_str += row["strength"]
@@ -281,9 +263,6 @@ def update_user_personalities(user_id: str, personality_list: list[str]) -> bool
             total_pow += row["willpower"]
             total_dex += row["dexterity"]
 
-        # 3) 유저 테이블 업데이트
-        #    기존 스탯에 합산
-        #    personality 컬럼에는 콤마로 연결한 문자열 저장
         personality_str = ",".join(personality_list)
 
         update_query = """
@@ -310,8 +289,7 @@ def update_user_personalities(user_id: str, personality_list: list[str]) -> bool
 
         updated = (cursor.rowcount > 0)
         if updated:
-            # 보조 스탯 재계산 (HP, MOV 등)
-            calculate_derived_stats(user_id)
+            update_user_state(user_id)
 
         return updated
 
@@ -399,36 +377,32 @@ def roll_luck():
     """3d6 * 5 행운값 굴리기"""
     return sum(random.randint(1, 6) for _ in range(3)) * 5
 
-def calculate_derived_stats(user_id):
+def update_user_state(user_id):
     """
-    유저의 STR, SIZ, HP, SAN 등을 바탕으로 MOV, DB, Build, 상태(status)를 재계산하여 DB에 반영.
-    성공하면 True, 실패면 False.
+    유저 상태 업데이트
     """
     try:
         db_config = get_db_config()
         conn = mysql.connector.connect(**db_config)
         cursor = conn.cursor(dictionary=True)
 
-        # 1) 현재 캐릭터 정보 가져오기
-        cursor.execute("SELECT strength, constitution, size, dexterity, willpower, hp, mp, sanity FROM users WHERE user_id = %s", (user_id,))
+        cursor.execute("SELECT strength, constitution, size, dexterity, willpower, intelligence, education, hp, mp, sanity FROM users WHERE user_id = %s", (user_id,))
         row = cursor.fetchone()
         if not row:
-            return False  # 없는 유저
+            return False
 
         strength = row["strength"]
         constitution = row["constitution"]
         size = row["size"]
         dexterity = row["dexterity"]
         willpower = row["willpower"]
+        intelligence = row["intelligence"]
+        education = row["education"]
 
-        # 2) HP, MP, SAN 계산
-        #    (CoC 7판 기준 가정)
         hp = (constitution + size) // 10
         mp = willpower // 5
-        san = min(willpower, 99)  # 최대치 99로 가정
+        san = min(willpower, 99)
 
-        # 3) 이동력(MOV) 계산 예시
-        # (단순화: STR< SIZ and DEX< SIZ => mov=7,  STR> SIZ or DEX> SIZ => mov=9, else 8)
         if strength < size and dexterity < size:
             mov = 7
         elif strength > size or dexterity > size:
@@ -436,7 +410,6 @@ def calculate_derived_stats(user_id):
         else:
             mov = 8
         
-        # 4) 피해 보너스(DB) & Build
         total_str_siz = strength + size
         if total_str_siz <= 64:
             damage_bonus = "-2d6"
@@ -467,7 +440,10 @@ def calculate_derived_stats(user_id):
         else:
             status = "N"
 
-        # 6) DB 업데이트
+        job_skill_point = education * 4  # 직업 기능 점수 = EDU * 4
+        interest_skill_point = intelligence * 2  # 관심 기능 점수 = INT * 2
+        skill_point = job_skill_point + interest_skill_point
+
         cursor.execute("""
             UPDATE users
             SET hp = %s,
@@ -476,9 +452,10 @@ def calculate_derived_stats(user_id):
                 movement = %s,
                 damage_bonus = %s,
                 build = %s,
-                status = %s
+                status = %s,
+                skill_point = %s
             WHERE user_id = %s
-        """, (hp, mp, san, mov, damage_bonus, build, status, user_id))
+        """, (hp, mp, san, mov, damage_bonus, build, status, skill_point, user_id))
         conn.commit()
 
         return True
